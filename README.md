@@ -1,3 +1,5 @@
+[English](README.en.md) | **简体中文**
+
 # AI 开发治理局 / AI Dev Governance
 
 > **一句话定义**
@@ -265,6 +267,16 @@ Mission → TASK Contract → ACK → WORKING → HANDOFF
 # 安装方式 / Installation
 
 > 当前版本：**V0.1 Public Beta · v0.1.0-beta.1**
+
+## 让 Codex 帮你安装（推荐）
+
+把下面这句话完整复制给 Codex：
+
+```text
+请从 https://github.com/nf2huochao/AI-Dev-Governance 安装 AI Dev Governance v0.1.0-beta.1 Skill；如果已经存在同名 Skill，请不要覆盖，先告诉我；安装完成后请告诉我是否需要重启 Codex。
+```
+
+## 使用 PowerShell 手动安装
 
 在 Windows PowerShell 中运行：
 
