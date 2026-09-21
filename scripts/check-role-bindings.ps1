@@ -1,0 +1,87 @@
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory = $true)]
+    [string]$RoleMapPath
+)
+
+$ErrorActionPreference = 'Stop'
+
+if (-not (Test-Path -LiteralPath $RoleMapPath)) { throw "ROLE_MAP_NOT_FOUND: $RoleMapPath" }
+
+$text = Get-Content -Raw -LiteralPath $RoleMapPath
+$projectMatch = [regex]::Match($text, '(?im)^\s*PROJECT_ID\s*:\s*(\S+)\s*$')
+if (-not $projectMatch.Success -or [string]::IsNullOrWhiteSpace($projectMatch.Groups[1].Value) -or $projectMatch.Groups[1].Value -match '^\{\{') {
+    throw 'PROJECT_ID_MISSING: role registry must contain a concrete PROJECT_ID'
+}
+$projectId = $projectMatch.Groups[1].Value
+$bootstrapStateMatch = [regex]::Match($text, '(?im)^\s*BOOTSTRAP_STATE\s*:\s*[\x60]?(ACTIVE|COMPLETE)[\x60]?\s*$')
+if (-not $bootstrapStateMatch.Success) { throw 'BOOTSTRAP_STATE_INVALID: expected ACTIVE or COMPLETE without changing the Core Architect role' }
+$bootstrapState = $bootstrapStateMatch.Groups[1].Value
+$outerMatch = [regex]::Match($text, '(?im)^\s*OUTER_TASK_ID\s*:\s*(\S+)\s*$')
+$outerTaskId = if ($outerMatch.Success) { $outerMatch.Groups[1].Value } else { '' }
+
+$rows = New-Object System.Collections.Generic.List[object]
+foreach ($line in ($text -split "`r?`n")) {
+    $row = [regex]::Match($line, '^\|\s*[\x60]?(CORE_ARCHITECT|MISSION_PLANNER|BUILD_EXECUTOR|EXTERNAL_ADVISOR)[\x60]?\s*\|\s*[\x60]?([^|]+?)[\x60]?\s*\|\s*[\x60]?([^|]+?)[\x60]?\s*\|\s*[\x60]?([^|]+?)[\x60]?\s*\|\s*[\x60]?([^|]+?)[\x60]?\s*\|\s*[\x60]?([^|]+?)[\x60]?\s*\|\s*[\x60]?([^|]+?)[\x60]?\s*\|\s*$')
+    if ($row.Success) {
+        $rows.Add([pscustomobject]@{
+            RoleId = $row.Groups[1].Value
+            DisplayName = $row.Groups[2].Value.Trim()
+            BindingMode = $row.Groups[3].Value.Trim()
+            CreationMode = $row.Groups[4].Value.Trim()
+            ThreadId = $row.Groups[5].Value.Trim()
+            TargetHandle = $row.Groups[6].Value.Trim()
+            BindingStatus = $row.Groups[7].Value.Trim()
+        })
+    }
+}
+if ($rows.Count -eq 0) { throw 'ROLE_TABLE_MISSING: role registry has no lifecycle-aware role binding rows' }
+
+foreach ($requiredRole in @('CORE_ARCHITECT', 'MISSION_PLANNER', 'BUILD_EXECUTOR')) {
+    $matches = @($rows | Where-Object RoleId -eq $requiredRole)
+    if ($matches.Count -eq 0) { throw "ROLE_BINDING_MISSING: $requiredRole" }
+    if ($matches.Count -gt 1) { throw "ROLE_BINDING_CONFLICT: $requiredRole appears more than once" }
+}
+if (@($rows | Where-Object RoleId -eq 'EXTERNAL_ADVISOR').Count -gt 1) { throw 'ROLE_BINDING_CONFLICT: EXTERNAL_ADVISOR appears more than once' }
+
+$core = @($rows | Where-Object RoleId -eq 'CORE_ARCHITECT')[0]
+if ($core.BindingMode -ne 'CURRENT_CONTEXT' -or $core.CreationMode -ne 'REUSE_CURRENT') {
+    throw 'CORE_ARCHITECT_LIFECYCLE_INVALID: BIND_CURRENT_CONTEXT_AS_CORE_ARCHITECT requires CURRENT_CONTEXT / REUSE_CURRENT'
+}
+if ($core.ThreadId -in @('CURRENT_THREAD_ID_UNAVAILABLE', 'UNAVAILABLE') -or $core.BindingStatus -eq 'BINDING_BLOCKED') {
+    throw 'CURRENT_THREAD_ID_UNAVAILABLE: CAPABILITY GAP; keep the original context as Core Architect and do not create a replacement'
+}
+
+foreach ($entry in @($rows | Where-Object RoleId -in @('MISSION_PLANNER', 'BUILD_EXECUTOR'))) {
+    if ($entry.BindingMode -ne 'CREATED_THREAD' -or $entry.CreationMode -ne 'ENSURE') {
+        throw "ROLE_LIFECYCLE_INVALID: $($entry.RoleId) requires CREATED_THREAD / ENSURE"
+    }
+}
+
+$threadIds = @()
+$targetHandles = @()
+foreach ($entry in $rows) {
+    if ($entry.RoleId -eq 'EXTERNAL_ADVISOR' -and $entry.BindingStatus -eq 'PENDING_BOOTSTRAP') { continue }
+    foreach ($field in @('DisplayName', 'ThreadId', 'TargetHandle')) {
+        if ([string]::IsNullOrWhiteSpace($entry.$field)) { throw "ROLE_BINDING_INCOMPLETE: $($entry.RoleId) requires DISPLAY_NAME, THREAD_ID and COMMUNICATION_TARGET_HANDLE" }
+    }
+    if ($entry.ThreadId -match '(?i)^(UNVERIFIED|UNKNOWN|NOT_CREATED|CURRENT_THREAD_ID_UNAVAILABLE|OUTER_TASK_ID|TASK_ID|EXECUTION_ID|DISPLAY_NAME)') {
+        throw "ROLE_BINDING_INCOMPLETE: $($entry.RoleId) has no bound THREAD_ID"
+    }
+    if ($entry.TargetHandle -match '(?i)^(UNVERIFIED|UNKNOWN|NOT_CREATED|CURRENT_THREAD_TARGET_UNAVAILABLE|OUTER_TASK_ID|TASK_ID|EXECUTION_ID|DISPLAY_NAME)') {
+        throw "ROLE_BINDING_INCOMPLETE: $($entry.RoleId) has no bound COMMUNICATION_TARGET_HANDLE"
+    }
+    if ($entry.ThreadId -eq $entry.DisplayName -or $entry.TargetHandle -eq $entry.DisplayName) {
+        throw "THREAD_OR_TARGET_INVALID: $($entry.RoleId) uses DISPLAY_NAME as an identity or communication target"
+    }
+    if ($entry.BindingStatus -ne 'BOUND') { throw "ROLE_BINDING_UNBOUND: $($entry.RoleId) status is $($entry.BindingStatus)" }
+    if ($threadIds -contains $entry.ThreadId) { throw "ROLE_BINDING_CONFLICT: THREAD_ID is reused: $($entry.ThreadId)" }
+    if ($targetHandles -contains $entry.TargetHandle) { throw "ROLE_BINDING_CONFLICT: COMMUNICATION_TARGET_HANDLE is reused: $($entry.TargetHandle)" }
+    $threadIds += $entry.ThreadId
+    $targetHandles += $entry.TargetHandle
+    if (-not [string]::IsNullOrWhiteSpace($outerTaskId) -and ($entry.ThreadId -eq $outerTaskId -or $entry.TargetHandle -eq $outerTaskId)) {
+        throw "OUTER_TASK_ID_NOT_A_ROUTING_TARGET: $($entry.RoleId) uses OUTER_TASK_ID as THREAD_ID or communication target"
+    }
+}
+
+Write-Output "ROLE_BINDINGS_STRUCTURALLY_VALID: PROJECT_ID=$projectId; BOOTSTRAP_STATE=$bootstrapState; CORE_ARCHITECT_SOURCE=CURRENT_CONTEXT; created_roles=2; platform_evidence_required_before_mission=true"
