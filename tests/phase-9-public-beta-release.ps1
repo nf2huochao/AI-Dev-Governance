@@ -10,11 +10,11 @@ function Assert-Contains([string]$Text, [string]$Expected, [string]$Message) {
     if (-not $Text.Contains($Expected)) { throw $Message }
 }
 
-Assert-Contains $readme 'main 分支' 'README must identify the current main branch as a development preview.'
+Assert-Contains $readme 'v0.1.1' 'README must identify the current public beta release.'
 Assert-Contains $readme 'TEAM_FIRST_BOOTSTRAP' 'README must describe the approved Team-First order.'
 Assert-Contains $readme 'https://github.com/nf2huochao/AI-Dev-Governance.git' 'README install command must use the public repository.'
 Assert-Contains $readme 'v0.1.0-beta.1' 'README must distinguish the earlier public beta tag.'
-Assert-Contains $readme '--branch main' 'README install command must fetch the current development preview.'
+Assert-Contains $readme '--branch v0.1.1' 'README install command must fetch the current release.'
 Assert-Contains $readme 'CHANGELOG.md' 'README must link to the current update notes.'
 Assert-Contains $readme 'EXTERNAL_VALIDATION_IN_PROGRESS' 'README must separate verified features from external validation.'
 

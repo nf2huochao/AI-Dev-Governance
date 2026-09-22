@@ -18,6 +18,13 @@
   <img src="docs/images/four-roles-banner.png" alt="Panoramic view of the four-role AI Dev Governance team" width="100%">
 </p>
 
+## Versions and updates
+
+- [v0.1.1: onboarding, installation, and evidence-boundary improvements](https://github.com/nf2huochao/AI-Dev-Governance/releases/tag/v0.1.1) (current public beta).
+- [v0.1.0: initial public beta](https://github.com/nf2huochao/AI-Dev-Governance/releases/tag/v0.1.0) (historical snapshot of the same code as `v0.1.0-beta.1`).
+
+See the [changelog](CHANGELOG.md) for details. Neither release is stable; real communication, Skill discovery, and MCP still need validation in new users' environments.
+
 ## Four Roles, One Governed System
 
 In Chinese thought, governance has never meant merely issuing orders.
@@ -266,14 +273,14 @@ Through an authorized MCP connection, the External Advisor can read real enginee
 
 # Installation
 
-> Current development preview: **main branch**. `v0.1.0-beta.1` remains the earlier published tag; these fixes do not yet have a new Release.
+> Current public beta: `v0.1.1`. Historical `v0.1.0` and the earlier `v0.1.0-beta.1` point to the same older code and do not include these improvements.
 
 ## Ask Codex to install it for you (recommended)
 
 Copy the complete sentence below into Codex:
 
 ```text
-Install the current AI Dev Governance development preview from the main branch of https://github.com/nf2huochao/AI-Dev-Governance. Check for an existing Skill with the same name first; explain a safe backup or update path and do not overwrite it without my confirmation. Then check Skill discovery in a new Codex task.
+Install AI Dev Governance Skill version v0.1.1 from https://github.com/nf2huochao/AI-Dev-Governance. Check for an existing Skill with the same name first; explain a safe backup or update path and do not overwrite it without my confirmation. Then check Skill discovery in a new Codex task.
 ```
 
 ## Manual installation with PowerShell
@@ -282,7 +289,7 @@ Run the following in Windows PowerShell:
 
 ```powershell
 $src = Join-Path $env:TEMP ("ai-dev-governance-" + [guid]::NewGuid())
-git clone --depth 1 --branch main https://github.com/nf2huochao/AI-Dev-Governance.git $src
+git clone --depth 1 --branch v0.1.1 https://github.com/nf2huochao/AI-Dev-Governance.git $src
 if ($LASTEXITCODE -ne 0) { throw 'GitHub download failed; installation was not run' }
 powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $src "scripts\install-local-skill.ps1")
 ```
