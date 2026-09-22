@@ -3,16 +3,15 @@
 你只需确认项目位置、接受或修改四角色名称、批准项目摘要，并完成平台要求的授权。
 保存文件、检查记录和执行内部命令由 Codex 负责。不要把 Skill 开发仓库当成新项目。
 
-当前改进版尚未发布；GitHub 的 v0.1.0-beta.1 仍是原公开测试版，不代表已包含这里的本地修复。
-当前版本的首次使用、真实多对话通信和 MCP 仍须实测，不能用脚本通过替代。
+GitHub 的 `main` 分支包含本次改进；`v0.1.0-beta.1` 是此前的公开测试标签，不包含这些修复。
+首次使用、真实多对话通信和 MCP 仍须实测，不能用脚本通过替代。
 
 ## 1. 安装并找到 Skill
 
 在 Codex 对话中发送：
 
-> 请从 https://github.com/nf2huochao/AI-Dev-Governance 安装已发布的 ai-dev-governance 测试版；先检查已有同名安装，发现旧版时先说明备份更新方案，不要覆盖。
+> 请从 https://github.com/nf2huochao/AI-Dev-Governance 的 main 分支安装 ai-dev-governance 当前开发预览版；先检查已有同名安装，发现旧版时先说明备份更新方案，不要覆盖。
 
-测试本地改进版时，改为把 Human Governor 提供的源码目录交给 Codex，说明“从这个本地目录安装，不要下载旧标签”。
 Codex 应先检查来源和安装清单；安装成功后会给出实际位置和版本。默认位于当前用户的 .agents/skills/ai-dev-governance。
 
 安装后新建 Codex 对话，输入 $ai-dev-governance 或从 Skill 选择器选择“AI 开发治理局”。
