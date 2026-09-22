@@ -9,14 +9,19 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  windows-powershell:
     runs-on: windows-latest
-    strategy:
-      matrix:
-        shell: [powershell, pwsh]
     steps:
       - uses: actions/checkout@v4
-      - name: Run regression suite
-        shell: ${{ matrix.shell }}
+      - name: Run Windows PowerShell regression suite
+        shell: powershell
+        run: |
+          & ./tests/run-tests.ps1
+  windows-pwsh:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run PowerShell 7 regression suite
+        shell: pwsh
         run: |
           & ./tests/run-tests.ps1
