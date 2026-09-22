@@ -1,35 +1,34 @@
-# External Advisor MCP 连接与核验
+# 外参师的工程只读连接
 
-MCP 在 V0.1 中只用于 External Advisor 的独立工程证据审查，不是三个 Codex 角色的日常通信总线。
+MCP 在本 Skill 中仅供 ChatGPT 外参师独立审查工程证据，不用于三个 Codex 角色的日常通信。
 
-## 用户需要亲自确认
+## 你需要做什么
 
-1. 在 Codex/ChatGPT 中找到当前项目的连接入口。
-2. 选择与项目工作区一致的本地项目，不要凭项目名称猜测。
-3. 完成平台要求的连接或授权操作；不要把凭证复制到聊天、Markdown 或 Git。
-4. 让平台显示或提供当前连接的项目路径。
-5. 将实际显示路径与预期工作区比较。
+先让天枢核检查当前平台实际可用的连接能力，再给你对应操作说明。
+不同账号、客户端和连接器提供的入口与权限可能不同；本 Skill 不假设存在统一的“连接当前项目”按钮，
+也未证明所有 ChatGPT Plus 用户都有相同的 MCP 能力。
 
-## 本地目标检查
+在 ChatGPT 外参师对话中，仅按实际界面完成必要授权。授权前检查项目与读取范围。
+不要在聊天、Git 或公开反馈里提交 Token、API Key、Cookie 或密码。
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File <skill-root>\scripts\check-mcp-target.ps1 `
-  -ExpectedProjectPath <expected-project-path> `
-  -ObservedProjectPath <path-reported-by-platform>
-```
+随后让外参师通过该连接完成一次真实只读检查：
 
-结果含义：
+> 请确认你实际连接的是我们批准的项目，读取该项目的角色记录中的项目标识，再读取一份我允许审查的非敏感工程文件。说明实际读取到了什么；没有访问能力请直接说明，不要根据我的描述猜测。
 
-- `MCP_TARGET_MATCH: PASS`：只证明两条已观察路径一致，不代表整个独立审查已经完成。
-- `MCP_TARGET_MISMATCH`：连接指向错误项目，停止审查并修正目标。
-- `MCP_CAPABILITY_GAP`：没有可核实的目标路径或连接能力，不能声称 MCP 可用。
+成功时，天枢核应核对返回的实际项目路径、项目标识与文件内容是否相符，并保留脱敏原始引用。
+仅显示“连接已保存”、重复用户给出的路径，或两个路径字符串相等，都不能证明工程读取成功。
 
-## 外参师能读取什么
+## 不成功时
 
-在授权范围内读取项目代码、测试、Git 状态、Commit、Diff、治理文件和证据；独立核对 Claim 与 Counter Evidence。External Advisor 不参加普通 TASK 派发、不写业务代码、不替代用户授权。
+连接到错误项目：停止读取，让天枢核指导你按现有连接器能力切换，不能修改别的项目。
+没有入口、未授权或无法返回可核实文件：标记 MANUAL_REQUIRED / MCP_CAPABILITY_GAP，并说明缺哪项能力。
+路径不符属于 MCP_TARGET_MISMATCH。不要反复安装连接器、购买服务或扩大权限来试错。
 
-## 常见失败
+可以先准备脱敏审查材料，但不能把手工材料说成 MCP 已通过；当前正式启动条件仍要求真实连接核验。
+外参师不写业务代码、不派普通任务，也不替用户批准高风险操作。
 
-- 路径存在但 Codex 当前项目未切换：回到 Codex 项目选择界面确认。
-- MCP 指向另一个项目：显示 `MCP_TARGET_MISMATCH`，不要通过修改日志掩盖。
-- 平台没有连接或无法回报目标：显示 `MCP_CAPABILITY_GAP`，由 Human Governor 决定是否继续人工审查。
+## 给 Codex 的辅助说明
+
+scripts/check-mcp-target.ps1 只比较 ExpectedProjectPath 与 ObservedProjectPath，
+MCP_TARGET_MATCH 只是路径结构检查，不认证连接、权限、消息来源或读取内容。
+具体实际读取证据与用户授权应由可访问平台记录的启动对话核实，不能自填 PASS。

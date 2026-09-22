@@ -1,0 +1,16 @@
+{
+  "required_fields": ["event", "project_id", "mission_id", "task_id", "execution_id", "actor", "status"],
+  "control_events": ["ROLE_THREAD_CREATED", "BOOTSTRAP_HELLO", "BOOTSTRAP_ACK", "RECOVERY_HELLO", "RECOVERY_ACK", "ROLE_THREAD_REBOUND"],
+  "transitions": {
+    "DISPATCH": ["ACK"], "ACK": ["WORKING", "BLOCKED"], "WORKING": ["HANDOFF", "BLOCKED"],
+    "HANDOFF": ["REVIEW", "BLOCKED"], "REVIEW": ["PASS", "REWORK", "BLOCKED", "ESCALATE"],
+    "PASS": ["DISPATCH"], "REWORK": ["WORKING"], "BLOCKED": ["ESCALATE"], "ESCALATE": ["DISPATCH"]
+  },
+  "actors": {
+    "DISPATCH": ["mission-planner"], "ACK": ["build-executor"], "WORKING": ["build-executor"],
+    "HANDOFF": ["build-executor"], "REVIEW": ["mission-planner"], "PASS": ["mission-planner"],
+    "REWORK": ["mission-planner"], "BLOCKED": ["build-executor", "mission-planner"],
+    "ESCALATE": ["mission-planner", "core-architect", "external-advisor"]
+  },
+  "resolution_required_for": ["ESCALATE->DISPATCH"]
+}

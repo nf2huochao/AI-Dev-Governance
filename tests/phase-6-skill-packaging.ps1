@@ -1,13 +1,13 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 
 $root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 foreach ($path in @('SKILL.md', 'README.md', 'LICENSE', 'scripts/init-governance.ps1', 'scripts/install-local-skill.ps1', 'scripts/check-workspace.ps1', 'scripts/check-mcp-target.ps1', 'scripts/guard-role-creation.ps1', 'scripts/check-role-bindings.ps1', 'scripts/check-bootstrap.ps1', 'scripts/check-startup-readiness.ps1', 'scripts/validate-governance.ps1', 'scripts/check-relay.ps1', 'governance/PROJECT-STARTUP-SUMMARY.template.md', 'governance/PROJECT-INDEX.template.md', 'governance/DEVELOPMENT-RULES.template.md', 'governance/ROLE-MAP.template.md', 'governance/RELAY_EVENTS.template.jsonl', 'examples/RELAY_EVENTS.bootstrap.example.jsonl', 'docs/FIRST-USE-ONBOARDING.zh-CN.md', 'docs/PROJECT-PLANNING-PROMPT.zh-CN.md', 'docs/MCP-EXTERNAL-ADVISOR-SETUP.zh-CN.md', 'docs/FAILURE-RECOVERY.zh-CN.md', 'examples/example-project/README.md')) {
     if (-not (Test-Path -LiteralPath (Join-Path $root $path))) { throw "Missing Phase 6 artifact: $path" }
 }
 
-$skill = Get-Content -Raw -LiteralPath (Join-Path $root 'SKILL.md')
-$readme = Get-Content -Raw -LiteralPath (Join-Path $root 'README.md')
-foreach ($token in @('External Advisor', 'Core Architect', 'Mission Planner', 'Build Executor', 'Ten-minute initialization', 'First-use onboarding', 'MCP', 'No AI supervises itself', 'SEND → YIELD → WAKE → ACT')) {
+$skill = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $root 'SKILL.md')
+$readme = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $root 'README.md')
+foreach ($token in @('External Advisor', 'Core Architect', 'Mission Planner', 'Build Executor', 'references/BOOTSTRAP-RUNBOOK.md', 'docs/FIRST-USE-ONBOARDING.zh-CN.md', 'MCP', 'No AI supervises itself', 'SEND → YIELD → WAKE → ACT')) {
     if (($skill + $readme) -notmatch [regex]::Escape($token)) { throw "Skill packaging missing $token" }
 }
 

@@ -2,6 +2,10 @@
 
 # AI 开发治理局 / AI Dev Governance
 
+> 启动顺序：`TEAM_FIRST_BOOTSTRAP`——先绑定原始天枢核，建立司策令与执造者并验证通信，再规划项目和授权开发。
+>
+> 验证状态：`EXTERNAL_VALIDATION_IN_PROGRESS`。脚本回归通过不等于所有 Codex 版本上的真实多对话、唤醒和 MCP 均已验证。
+
 > **一句话定义**
 >
 > 一套面向 **ChatGPT Plus + Codex** 用户的开源 AI 开发治理 Skill，通过“外参师、天枢核、司策令、执造者”四角色协作，让长期软件开发更可监督、可纠偏、可接力。
@@ -266,14 +270,14 @@ Mission → TASK Contract → ACK → WORKING → HANDOFF
 
 # 安装方式 / Installation
 
-> 当前版本：**V0.1 Public Beta · v0.1.0-beta.1**
+> 当前开发预览版：**main 分支**。`v0.1.0-beta.1` 是已发布的旧标签；本次修复尚未另建 Release。
 
 ## 让 Codex 帮你安装（推荐）
 
 把下面这句话完整复制给 Codex：
 
 ```text
-请从 https://github.com/nf2huochao/AI-Dev-Governance 安装 AI Dev Governance v0.1.0-beta.1 Skill；如果已经存在同名 Skill，请不要覆盖，先告诉我；安装完成后请告诉我是否需要重启 Codex。
+请从 https://github.com/nf2huochao/AI-Dev-Governance 的 main 分支安装 AI Dev Governance Skill 当前开发预览版；先检查是否已有同名安装，有则先说明安全备份或更新方法，未经我确认不要覆盖。安装后请在新对话检查 Skill 是否被发现。
 ```
 
 ## 使用 PowerShell 手动安装
@@ -282,7 +286,8 @@ Mission → TASK Contract → ACK → WORKING → HANDOFF
 
 ```powershell
 $src = Join-Path $env:TEMP ("ai-dev-governance-" + [guid]::NewGuid())
-git clone --depth 1 --branch v0.1.0-beta.1 https://github.com/nf2huochao/AI-Dev-Governance.git $src
+git clone --depth 1 --branch main https://github.com/nf2huochao/AI-Dev-Governance.git $src
+if ($LASTEXITCODE -ne 0) { throw 'GitHub 下载失败，安装未执行' }
 powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $src "scripts\install-local-skill.ps1")
 ```
 
@@ -294,7 +299,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $src "scripts\ins
 请使用 ai-dev-governance 帮我启动项目。
 ```
 
-如果没有出现工作区确认引导，请先查看 [中文首次使用指南](docs/FIRST-USE-ONBOARDING.zh-CN.md)，并通过 [GitHub Issues](https://github.com/nf2huochao/AI-Dev-Governance/issues) 反馈。
+如果没有出现工作区确认引导，请先查看 [中文首次使用指南](docs/FIRST-USE-ONBOARDING.zh-CN.md)，并通过 [GitHub Issues](https://github.com/nf2huochao/AI-Dev-Governance/issues) 反馈。此次改动见[更新说明](CHANGELOG.md)。
 
 ---
 
@@ -354,19 +359,20 @@ powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $src "scripts\ins
 
 # 当前状态 / Public Beta Status
 
-已完成验证：
+已通过本地确定性回归验证：
 
-- Windows 本地安装和 Codex 自动发现
+- Windows 隔离安装包复制、重复安装保护与文件完整性
 - Team-First Bootstrap
 - 原始对话直接绑定唯一 Core Architect
 - 只创建一个 Mission Planner 和一个 Build Executor
-- 两组真实 HELLO / ACK 基础通信
+- HELLO / ACK 身份、顺序和证据引用的结构检查
 - No polling 与 Event-Driven Relay 规则
 - Single Writer、项目启动摘要和治理资料初始化机制
 
 仍在邀请真实用户验证：
 
 - 不同 ChatGPT Plus / Codex 环境兼容性
+- Codex 自动发现、三个独立对话的真实 HELLO / ACK、送达与唤醒
 - External Advisor 首次建立体验
 - MCP 实际连接体验
 - 完整 `Mission → TASK → HANDOFF → Review`

@@ -18,15 +18,15 @@ function Invoke-ExpectedFailure {
     }
 }
 
-$skill = Get-Content -Raw -LiteralPath (Join-Path $root 'SKILL.md')
-$onboarding = Get-Content -Raw -LiteralPath (Join-Path $root 'docs\FIRST-USE-ONBOARDING.zh-CN.md')
-$recovery = Get-Content -Raw -LiteralPath (Join-Path $root 'docs\FAILURE-RECOVERY.zh-CN.md')
+$skill = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $root 'SKILL.md')
+$onboarding = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $root 'references\BOOTSTRAP-RUNBOOK.md')
+$recovery = $onboarding
 $roleMapTemplate = Get-Content -Raw -LiteralPath (Join-Path $root 'governance\ROLE-MAP.template.md')
 $guardPath = Join-Path $root 'scripts\guard-role-creation.ps1'
 
 Assert-True ($skill -match 'BIND_CURRENT_CONTEXT_AS_CORE_ARCHITECT') 'Skill must bind the original context as Core Architect'
 Assert-True ($skill -match 'EXPECTED_NEW_CODEX_THREADS\s*=\s*2') 'Skill must declare that Bootstrap creates exactly two Codex threads'
-Assert-True ($skill -match 'BOOTSTRAP_STATE\s*=\s*ACTIVE' -and $skill -match 'BOOTSTRAP_STATE\s*=\s*COMPLETE') 'Bootstrap must change state without changing the Core Architect role'
+Assert-True ($onboarding -match 'BOOTSTRAP_STATE\s*=\s*ACTIVE' -and $onboarding -match 'BOOTSTRAP_STATE\s*=\s*COMPLETE') 'Bootstrap must change state without changing the Core Architect role'
 Assert-True ($onboarding -match 'CURRENT ORIGINAL CONVERSATION') 'First-use wording must tell the user that the current conversation is Core Architect'
 Assert-True ($onboarding -match 'EXPECTED_NEW_CODEX_THREADS\s*=\s*2') 'First-use wording must describe exactly two new Codex conversations'
 Assert-True ($recovery -match 'REUSE_CURRENT' -and $recovery -match 'CURRENT_CONTEXT') 'Recovery rules must reuse the original Core Architect context'
@@ -36,8 +36,8 @@ Assert-True (Test-Path -LiteralPath $guardPath) 'Missing deterministic role-crea
 $coreGuard = Invoke-ExpectedFailure -ScriptPath $guardPath -Arguments @{ RoleId = 'CORE_ARCHITECT' }
 Assert-True ($coreGuard -match 'CORE_ARCHITECT_CREATION_FORBIDDEN' -and $coreGuard -match 'CURRENT_CONTEXT_MUST_BE_REUSED') 'Core Architect reached the create-thread route'
 foreach ($roleId in @('MISSION_PLANNER', 'BUILD_EXECUTOR')) {
-    $guardOutput = & powershell -NoProfile -ExecutionPolicy Bypass -File $guardPath -RoleId $roleId | Out-String
-    Assert-True ($LASTEXITCODE -eq 0 -and $guardOutput -match 'ROLE_CREATION_ALLOWED') "$roleId was not allowed through the guarded create-thread route"
+    $guardOutput = Invoke-ExpectedFailure -ScriptPath $guardPath -Arguments @{ RoleId = $roleId }
+    Assert-True ($guardOutput -match 'ROLE_MAP_REQUIRED') "$roleId creation did not fail closed without ROLE-MAP"
 }
 
 $artifactRoot = Join-Path $root '.test-artifacts\phase-8-current-context-core-binding'
@@ -94,7 +94,7 @@ OUTER_TASK_ID: NOT_A_ROUTING_TARGET
     $bootstrapEvents | Set-Content -LiteralPath $eventsPath -Encoding utf8
 
     $bootstrapOutput = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'scripts\check-bootstrap.ps1') -EventsPath $eventsPath -RoleMapPath $boundRoleMapPath -ExecutionId 'bootstrap-001' | Out-String
-    Assert-True ($bootstrapOutput -match 'EXPECTED_NEW_CODEX_THREADS=2' -and $bootstrapOutput -match 'CORE_ARCHITECT_SOURCE=CURRENT_ORIGINAL_CONVERSATION') 'Bootstrap did not assert the two-thread current-context model'
+    Assert-True ($bootstrapOutput -match 'actual_new_threads=2' -and $bootstrapOutput -match 'CORE_ARCHITECT_SOURCE=CURRENT_ORIGINAL_CONVERSATION') 'Bootstrap did not assert the two-thread current-context model'
 
     $thirdThreadEventsPath = Join-Path $artifactRoot 'RELAY_EVENTS-THIRD-THREAD.jsonl'
     $thirdThread = '{"event":"ROLE_THREAD_CREATED","project_id":"demo-project","execution_id":"bootstrap-001","role_id":"CORE_ARCHITECT","thread_id":"thread-core-new","binding_mode":"CREATED_THREAD","creation_mode":"ENSURE","evidence":"unexpected-create-result"}'

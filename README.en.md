@@ -266,14 +266,14 @@ Through an authorized MCP connection, the External Advisor can read real enginee
 
 # Installation
 
-> Current version: **V0.1 Public Beta · v0.1.0-beta.1**
+> Current development preview: **main branch**. `v0.1.0-beta.1` remains the earlier published tag; these fixes do not yet have a new Release.
 
 ## Ask Codex to install it for you (recommended)
 
 Copy the complete sentence below into Codex:
 
 ```text
-Install the AI Dev Governance v0.1.0-beta.1 Skill from https://github.com/nf2huochao/AI-Dev-Governance. If a Skill with the same name already exists, do not overwrite it; tell me first. When installation is complete, tell me whether Codex needs to be restarted.
+Install the current AI Dev Governance development preview from the main branch of https://github.com/nf2huochao/AI-Dev-Governance. Check for an existing Skill with the same name first; explain a safe backup or update path and do not overwrite it without my confirmation. Then check Skill discovery in a new Codex task.
 ```
 
 ## Manual installation with PowerShell
@@ -282,7 +282,8 @@ Run the following in Windows PowerShell:
 
 ```powershell
 $src = Join-Path $env:TEMP ("ai-dev-governance-" + [guid]::NewGuid())
-git clone --depth 1 --branch v0.1.0-beta.1 https://github.com/nf2huochao/AI-Dev-Governance.git $src
+git clone --depth 1 --branch main https://github.com/nf2huochao/AI-Dev-Governance.git $src
+if ($LASTEXITCODE -ne 0) { throw 'GitHub download failed; installation was not run' }
 powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $src "scripts\install-local-skill.ps1")
 ```
 
@@ -294,7 +295,7 @@ After installation, restart Codex. In a new Codex project or conversation, send:
 Use ai-dev-governance to help me start a project.
 ```
 
-If the workspace-confirmation guide does not appear, consult the [Chinese First-Use Guide](docs/FIRST-USE-ONBOARDING.zh-CN.md) and report the problem through [GitHub Issues](https://github.com/nf2huochao/AI-Dev-Governance/issues).
+If the workspace-confirmation guide does not appear, consult the [Chinese First-Use Guide](docs/FIRST-USE-ONBOARDING.zh-CN.md) and report the problem through [GitHub Issues](https://github.com/nf2huochao/AI-Dev-Governance/issues). See the [change notes](CHANGELOG.md) for this update.
 
 ---
 
@@ -354,19 +355,20 @@ Before submitting an Issue, log, or screenshot, remove API keys, access tokens, 
 
 # Public Beta Status
 
-Verified capabilities:
+Verified by local deterministic regression tests:
 
-- Local Windows installation and automatic Codex discovery
+- Isolated Windows package copy, duplicate-install protection, and package integrity
 - Team-First Bootstrap
 - Direct binding of the original conversation as the only Core Architect
 - Creation of exactly one Mission Planner and one Build Executor
-- Two real HELLO / ACK communication checks
+- Structural checks for HELLO / ACK identity, order, and evidence references
 - No-polling and Event-Driven Relay rules
 - Single Writer, Project Startup Summary, and governance initialization mechanisms
 
 Still being validated with real users:
 
 - Compatibility across different ChatGPT Plus and Codex environments
+- Actual Codex discovery, real HELLO / ACK delivery, execution, and wake-up across three independent conversations
 - The first-time External Advisor setup experience
 - Real MCP connection experience
 - The complete `Mission → TASK → HANDOFF → Review` cycle

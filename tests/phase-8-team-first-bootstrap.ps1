@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 
 $root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 
@@ -18,17 +18,17 @@ function Invoke-ExpectedFailure {
     }
 }
 
-$skill = Get-Content -Raw -LiteralPath (Join-Path $root 'SKILL.md')
-$onboarding = Get-Content -Raw -LiteralPath (Join-Path $root 'docs\FIRST-USE-ONBOARDING.zh-CN.md')
+$skill = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $root 'SKILL.md')
+$onboarding = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $root 'references\BOOTSTRAP-RUNBOOK.md')
 $roleMap = Get-Content -Raw -LiteralPath (Join-Path $root 'governance\ROLE-MAP.template.md')
 
-Assert-True ($skill -match 'CORE_ARCHITECT.*BOOTSTRAP') 'Skill must bind the first Codex conversation to CORE_ARCHITECT'
-Assert-True ($skill -match 'BOOTSTRAP_STATE.*ACTIVE' -and $skill -match 'BOOTSTRAP_STATE.*COMPLETE') 'Skill must define Bootstrap as a Core Architect state transition'
+Assert-True ($onboarding -match 'CORE_ARCHITECT_SOURCE = CURRENT ORIGINAL CONVERSATION') 'Skill must bind the first Codex conversation to CORE_ARCHITECT'
+Assert-True ($onboarding -match 'BOOTSTRAP_STATE.*ACTIVE' -and $onboarding -match 'BOOTSTRAP_STATE.*COMPLETE') 'Skill must define Bootstrap as a Core Architect state transition'
 Assert-True ($skill -match 'TEAM-FIRST') 'Skill must define the team-first startup order'
 Assert-True ($onboarding -match 'CORE_ARCHITECT' -and $onboarding -match 'BOOTSTRAP_HELLO' -and $onboarding -match 'BOOTSTRAP_ACK') 'Onboarding must require the two bootstrap HELLO/ACK checks'
-Assert-True ($onboarding -match 'only after bootstrap passes') 'Communication must be verified before project planning'
-Assert-True ($onboarding -match 'must not create a second') 'Onboarding must prevent a second Core Architect'
-Assert-True ($onboarding -match '逐项重复询问') 'Onboarding must not require confirmation after every role or routine message'
+Assert-True ($onboarding -match '通信经原始证据核实后，才转 ChatGPT') 'Communication must be verified before project planning'
+Assert-True ($onboarding -match '不能创建第二个 Core Architect') 'Onboarding must prevent a second Core Architect'
+Assert-True ($onboarding -match '无需每一步再自然语言询问') 'Onboarding must not require confirmation after every role or routine message'
 foreach ($field in @('PROJECT_ID', 'ROLE_ID', 'THREAD_ID', 'TASK_ID', 'EXECUTION_ID', 'OUTER_TASK_ID')) {
     Assert-True ($roleMap -match $field) "Role registry is missing identity field: $field"
 }

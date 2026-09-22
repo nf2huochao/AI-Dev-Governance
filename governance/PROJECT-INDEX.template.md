@@ -4,6 +4,8 @@
 - Project Short Name: `{{PROJECT_SHORT_NAME}}`
 - Workspace: `{{WORKSPACE_PATH}}`
 - Approved requirement baseline: `.ai-governance/PROJECT-STARTUP-SUMMARY.md`
+- PROJECT_SPEC_PATH: `.ai-governance/PROJECT-STARTUP-SUMMARY.md`
+- GOVERNANCE_POLICY_PATH: `.ai-governance/DEVELOPMENT-RULES.md` and `.ai-governance/roles/`
 - Development rules: `.ai-governance/DEVELOPMENT-RULES.md`
 - Role display-name map: `.ai-governance/ROLE-MAP.md`
 - Current phase and gate: `.ai-governance/CURRENT_PHASE.md`
@@ -16,5 +18,6 @@
 ## Authority rules
 
 - The original approved startup summary is the requirement baseline; this index does not replace it.
+- The Skill repository's `SPEC-V0.1.md` governs AI Dev Governance itself and is not the user's project requirement baseline.
 - Governance files persist context; they do not replace real role conversations.
 - If two records conflict, stop and route the conflict to Core Architect or Human Governor according to the role boundaries.
