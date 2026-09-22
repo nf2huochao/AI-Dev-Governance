@@ -28,13 +28,24 @@ $count = 0
 $formalCount = 0
 $controlCount = 0
 $completedTasks = 0
+$projectIdentity = $null
+$closedTasks = @{}
+$usedExecutions = @{}
 
 foreach ($line in [IO.File]::ReadAllLines($eventsPath, [Text.Encoding]::UTF8)) {
     if ([string]::IsNullOrWhiteSpace($line)) { continue }
     $count++
-    try { $event = $line | ConvertFrom-Json } catch { throw "Invalid JSON at event $count" }
+    try {
+        $event = $line | ConvertFrom-Json
+        if ($null -eq $event -or $event -is [array] -or $event -isnot [pscustomobject]) { throw 'expected event object' }
+    } catch { throw "Invalid JSON object at event $count" }
+    Require-Text $event 'event' $count
+    Require-Text $event 'project_id' $count
+    if ($null -eq $projectIdentity) { $projectIdentity = [string]$event.project_id }
+    if ($event.project_id -ne $projectIdentity) { throw "RELAY_CONTEXT_MISMATCH: project changed at event $count" }
 
     if ([string]$event.event -in $controlEvents) {
+        foreach ($field in @('execution_id','role_id','thread_id','evidence')) { Require-Text $event $field $count }
         $controlCount++
         continue
     }
@@ -63,9 +74,12 @@ foreach ($line in [IO.File]::ReadAllLines($eventsPath, [Text.Encoding]::UTF8)) {
     }
     $startsNewTask = $state -eq 'DISPATCH' -and $previous -in @($null, 'PASS', 'ESCALATE')
     if ($startsNewTask) {
+        if ($closedTasks.ContainsKey($context.TaskId)) { throw "TASK_ALREADY_COMPLETED: $($context.TaskId); a completed TASK must not be silently reopened" }
+        if ($usedExecutions.ContainsKey($context.ExecutionId)) { throw "EXECUTION_ALREADY_USED: $($context.ExecutionId); retries and new tasks need a distinct execution" }
         if ($previous -eq 'ESCALATE') {
             Require-Text $event 'resolution_ref' $count
         }
+        $usedExecutions[$context.ExecutionId] = $true
         $active = $context
     } else {
         foreach ($field in @('ProjectId', 'MissionId', 'TaskId', 'ExecutionId')) {
@@ -75,17 +89,17 @@ foreach ($line in [IO.File]::ReadAllLines($eventsPath, [Text.Encoding]::UTF8)) {
         }
     }
 
-    if ($state -eq 'PASS') { $completedTasks++ }
+    if ($state -eq 'PASS') { $completedTasks++; $closedTasks[$context.TaskId] = $true }
     $previous = $state
 }
 
 if ($count -eq 0) {
     Write-Output 'Relay validation: PASS (empty initial log; no formal relay or control event has occurred)'
-    exit 0
+    return
 }
 if ($formalCount -eq 0) {
     Write-Output "Relay validation: PASS (structure valid; $controlCount control events; formal relay not started)"
-    exit 0
+    return
 }
 
 $completion = if ($previous -eq 'PASS') { 'true' } else { 'false' }

@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: windows-latest
@@ -16,9 +19,4 @@ jobs:
       - name: Run regression suite
         shell: ${{ matrix.shell }}
         run: |
-          $failed = @()
-          foreach ($test in Get-ChildItem ./tests/*.ps1 | Sort-Object Name) {
-            & $test.FullName
-            if (-not $?) { $failed += $test.Name }
-          }
-          if ($failed.Count) { throw "Failed tests: $($failed -join ', ')" }
+          & ./tests/run-tests.ps1

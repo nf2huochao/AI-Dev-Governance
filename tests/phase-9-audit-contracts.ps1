@@ -34,10 +34,25 @@ BOOTSTRAP_STATE: COMPLETE
   $platform=Join-Path $artifacts 'platform.txt'; W $platform 'original tool records retained'
   $mcp=Join-Path $artifacts 'mcp.txt'; W $mcp 'observed project target retained'
   $auth=Join-Path $artifacts 'authorization.json'
-  $receipt=[ordered]@{authorization_decision='ALLOW_FIRST_MISSION';verification_status='HUMAN_VERIFIED';authorized_by='HUMAN_GOVERNOR';project_id='demo';execution_id='boot';role_map_sha256=(Sha $map);approved_summary_sha256=(Sha $summary);platform_evidence_sha256=(Sha $platform);mcp_evidence_sha256=(Sha $mcp)}
+  $receipt=[ordered]@{authorization_decision='ALLOW_FIRST_MISSION';verification_status='HUMAN_VERIFIED';authorized_by='HUMAN_GOVERNOR';project_id='demo';execution_id='boot';role_map_sha256=(Sha $map);relay_events_sha256=(Sha $events);approved_summary_sha256=(Sha $summary);platform_evidence_sha256=(Sha $platform);mcp_evidence_sha256=(Sha $mcp)}
   W $auth ($receipt|ConvertTo-Json)
-  $ready=& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'scripts\check-startup-readiness.ps1') -RoleMapPath $map -EventsPath $events -ExecutionId boot -PlatformEvidencePath $platform -McpEvidencePath $mcp -ApprovedSummaryPath $summary -HumanAuthorizationPath $auth | Out-String
-  if($LASTEXITCODE -ne 0 -or $ready -notmatch 'authorization=HUMAN_VERIFIED' -or $ready -notmatch 'platform_attestation=false'){throw "Bound human authorization failed: $ready"}
+  $ready=& (Get-Process -Id $PID).Path -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'scripts\check-startup-readiness.ps1') -RoleMapPath $map -EventsPath $events -ExecutionId boot -PlatformEvidencePath $platform -McpEvidencePath $mcp -ApprovedSummaryPath $summary -HumanAuthorizationPath $auth -AsJson | Out-String
+  $result=$ready|ConvertFrom-Json
+  if($LASTEXITCODE -ne 0 -or $result.status -ne 'MANUAL_REQUIRED' -or $result.may_start_mission -ne $false -or $result.authorization_authenticated -ne $false -or $result.platform_attestation -ne $false){throw "Hand-written receipt must never authorize startup: $ready"}
+  $recoveryReady=& (Get-Process -Id $PID).Path -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'scripts\check-startup-readiness.ps1') -RoleMapPath $map -EventsPath $events -ExecutionId recover -Mode Recovery -PlatformEvidencePath $platform -McpEvidencePath $mcp -ApprovedSummaryPath $summary -AsJson | Out-String
+  if($LASTEXITCODE -ne 0 -or ($recoveryReady|ConvertFrom-Json).may_start_mission -ne $false){throw 'Recovery structural check must remain unauthenticated'}
+  $history=[IO.File]::ReadAllText($events)
+  W $events (($history -split "`n" | Where-Object { $_ -notmatch 'ROLE_THREAD_CREATED' }) -join "`n")
+  $oldPreference=$ErrorActionPreference; $ErrorActionPreference='Continue'
+  $noHistory=& (Get-Process -Id $PID).Path -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'scripts\check-bootstrap.ps1') -EventsPath $events -RoleMapPath $map -ExecutionId recover -Mode Recovery 2>&1 | Out-String
+  $historyCode=$LASTEXITCODE; $ErrorActionPreference=$oldPreference
+  if($historyCode -eq 0 -or $noHistory -notmatch 'RECOVERY_CREATION_HISTORY_REQUIRED'){throw 'Historyless recovery was accepted'}
+  W $events ($history + "`n")
+  $oldPreference=$ErrorActionPreference; $ErrorActionPreference='Continue'
+  $changedEvents=& (Get-Process -Id $PID).Path -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'scripts\check-startup-readiness.ps1') -RoleMapPath $map -EventsPath $events -ExecutionId boot -PlatformEvidencePath $platform -McpEvidencePath $mcp -ApprovedSummaryPath $summary -HumanAuthorizationPath $auth -AsJson 2>&1 | Out-String
+  $eventCode=$LASTEXITCODE; $ErrorActionPreference=$oldPreference
+  if($eventCode -eq 0 -or $changedEvents -notmatch 'STALE_OR_MISMATCHED'){throw 'Changed event log did not invalidate receipt consistency'}
+  W $events $history
   W $summary "# Summary`n`nApproval Status: APPROVED`nchanged`n"
   $oldPreference=$ErrorActionPreference; $ErrorActionPreference='Continue'
   $stale=& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'scripts\check-startup-readiness.ps1') -RoleMapPath $map -EventsPath $events -ExecutionId boot -PlatformEvidencePath $platform -McpEvidencePath $mcp -ApprovedSummaryPath $summary -HumanAuthorizationPath $auth 2>&1 | Out-String

@@ -18,15 +18,15 @@ function Invoke-ExpectedFailure {
     }
 }
 
-$skill = Get-Content -Raw -LiteralPath (Join-Path $root 'SKILL.md')
-$onboarding = Get-Content -Raw -LiteralPath (Join-Path $root 'docs\FIRST-USE-ONBOARDING.zh-CN.md')
-$recovery = Get-Content -Raw -LiteralPath (Join-Path $root 'docs\FAILURE-RECOVERY.zh-CN.md')
+$skill = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $root 'SKILL.md')
+$onboarding = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $root 'references\BOOTSTRAP-RUNBOOK.md')
+$recovery = $onboarding
 $roleMapTemplate = Get-Content -Raw -LiteralPath (Join-Path $root 'governance\ROLE-MAP.template.md')
 $guardPath = Join-Path $root 'scripts\guard-role-creation.ps1'
 
 Assert-True ($skill -match 'BIND_CURRENT_CONTEXT_AS_CORE_ARCHITECT') 'Skill must bind the original context as Core Architect'
 Assert-True ($skill -match 'EXPECTED_NEW_CODEX_THREADS\s*=\s*2') 'Skill must declare that Bootstrap creates exactly two Codex threads'
-Assert-True ($skill -match 'BOOTSTRAP_STATE\s*=\s*ACTIVE' -and $skill -match 'BOOTSTRAP_STATE\s*=\s*COMPLETE') 'Bootstrap must change state without changing the Core Architect role'
+Assert-True ($onboarding -match 'BOOTSTRAP_STATE\s*=\s*ACTIVE' -and $onboarding -match 'BOOTSTRAP_STATE\s*=\s*COMPLETE') 'Bootstrap must change state without changing the Core Architect role'
 Assert-True ($onboarding -match 'CURRENT ORIGINAL CONVERSATION') 'First-use wording must tell the user that the current conversation is Core Architect'
 Assert-True ($onboarding -match 'EXPECTED_NEW_CODEX_THREADS\s*=\s*2') 'First-use wording must describe exactly two new Codex conversations'
 Assert-True ($recovery -match 'REUSE_CURRENT' -and $recovery -match 'CURRENT_CONTEXT') 'Recovery rules must reuse the original Core Architect context'

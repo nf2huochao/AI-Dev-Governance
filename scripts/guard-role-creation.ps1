@@ -28,13 +28,16 @@ if ($entry.BindingMode -ne 'CREATED_THREAD' -or $entry.CreationMode -ne 'ENSURE'
     throw "ROLE_BINDING_CONFLICT: $RoleId has an invalid lifecycle"
 }
 if ($entry.BindingStatus -eq 'BOUND') {
-    if ($entry.ThreadId -match '^(NOT_CREATED|UNKNOWN|UNVERIFIED)$' -or $entry.TargetHandle -match '^(PENDING_CREATION|UNKNOWN|UNVERIFIED)$') {
+    if (-not (Test-ConcreteRoleIdentity $entry.ThreadId) -or -not (Test-ConcreteRoleIdentity $entry.TargetHandle) -or $entry.ThreadId -eq $entry.DisplayName -or $entry.TargetHandle -eq $entry.DisplayName) {
         throw "ROLE_BINDING_CONFLICT: $RoleId has an invalid bound identity"
     }
+    foreach ($other in @($roleMap.Rows | Where-Object { $_.RoleId -ne $RoleId -and $_.BindingStatus -eq 'BOUND' })) {
+        if ($entry.ThreadId -eq $other.ThreadId -or $entry.TargetHandle -eq $other.TargetHandle) { throw 'ROLE_BINDING_CONFLICT: role identity or target reused' }
+    }
     Write-Output "ROLE_ALREADY_BOUND: ROLE_ID=$RoleId; ACTION=REUSE_EXISTING_THREAD; THREAD_ID=$($entry.ThreadId)"
-    exit 0
+    return
 }
-if ($entry.BindingStatus -ne 'PENDING_CREATION' -or $entry.ThreadId -ne 'NOT_CREATED' -or $entry.TargetHandle -ne 'PENDING_CREATION') {
+if ($entry.BindingStatus -ne 'PENDING_CREATION' -or $entry.ThreadId -ne 'NOT_CREATED' -or $entry.TargetHandle -notin @('NOT_CREATED', 'PENDING_CREATION')) {
     throw "ROLE_CREATION_BLOCKED: $RoleId is not in the explicit PENDING_CREATION state"
 }
 

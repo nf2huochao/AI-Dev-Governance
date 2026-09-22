@@ -354,19 +354,20 @@ Before submitting an Issue, log, or screenshot, remove API keys, access tokens, 
 
 # Public Beta Status
 
-Verified capabilities:
+Verified by local deterministic regression tests:
 
-- Local Windows installation and automatic Codex discovery
+- Isolated Windows package copy, duplicate-install protection, and package integrity
 - Team-First Bootstrap
 - Direct binding of the original conversation as the only Core Architect
 - Creation of exactly one Mission Planner and one Build Executor
-- Two real HELLO / ACK communication checks
+- Structural checks for HELLO / ACK identity, order, and evidence references
 - No-polling and Event-Driven Relay rules
 - Single Writer, Project Startup Summary, and governance initialization mechanisms
 
 Still being validated with real users:
 
 - Compatibility across different ChatGPT Plus and Codex environments
+- Actual Codex discovery, real HELLO / ACK delivery, execution, and wake-up across three independent conversations
 - The first-time External Advisor setup experience
 - Real MCP connection experience
 - The complete `Mission → TASK → HANDOFF → Review` cycle

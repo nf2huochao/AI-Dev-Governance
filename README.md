@@ -358,19 +358,20 @@ powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $src "scripts\ins
 
 # 当前状态 / Public Beta Status
 
-已完成验证：
+已通过本地确定性回归验证：
 
-- Windows 本地安装和 Codex 自动发现
+- Windows 隔离安装包复制、重复安装保护与文件完整性
 - Team-First Bootstrap
 - 原始对话直接绑定唯一 Core Architect
 - 只创建一个 Mission Planner 和一个 Build Executor
-- 两组真实 HELLO / ACK 基础通信
+- HELLO / ACK 身份、顺序和证据引用的结构检查
 - No polling 与 Event-Driven Relay 规则
 - Single Writer、项目启动摘要和治理资料初始化机制
 
 仍在邀请真实用户验证：
 
 - 不同 ChatGPT Plus / Codex 环境兼容性
+- Codex 自动发现、三个独立对话的真实 HELLO / ACK、送达与唤醒
 - External Advisor 首次建立体验
 - MCP 实际连接体验
 - 完整 `Mission → TASK → HANDOFF → Review`

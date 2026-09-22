@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI 开发治理局"
+  short_description: "分工规划、开发与独立审查，逐步建立团队并从中断处恢复项目"
+  default_prompt: "请使用 $ai-dev-governance 帮我建立项目团队：先确认工作区，再建立另外两个 Codex 角色并检查通信；如果项目已有记录，就从当前进度继续。"

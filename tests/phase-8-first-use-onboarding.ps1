@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 
 $root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $artifactRoot = Join-Path $root 'tests\.artifacts\phase-8-first-use-onboarding'
@@ -14,13 +14,13 @@ function Assert-True {
 
 function Invoke-ExpectedFailure {
     param([string]$ScriptPath, [hashtable]$Arguments)
-    try {
-        $output = & $ScriptPath @Arguments | Out-String
-        if ($LASTEXITCODE -ne 0) { return $output }
-        throw "Expected failure from $ScriptPath, but it completed successfully"
-    } catch {
-        return $_.ToString()
-    }
+    $nativeArguments = @()
+    foreach ($key in $Arguments.Keys) { $nativeArguments += "-$key"; $nativeArguments += [string]$Arguments[$key] }
+    $previous = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+    try { $output = & (Get-Process -Id $PID).Path -NoProfile -ExecutionPolicy Bypass -File $ScriptPath @nativeArguments 2>&1 | Out-String; $code = $LASTEXITCODE }
+    finally { $ErrorActionPreference = $previous }
+    if ($code -eq 0) { throw "Expected failure from $ScriptPath, but it completed successfully" }
+    return $output
 }
 
 if (Test-Path -LiteralPath $artifactRoot) { Remove-Item -LiteralPath $artifactRoot -Recurse -Force }
@@ -32,7 +32,7 @@ try {
     $init = Join-Path $root 'scripts\init-governance.ps1'
     $validate = Join-Path $root 'scripts\validate-governance.ps1'
     $relayCheck = Join-Path $root 'scripts\check-relay.ps1'
-    $onboarding = Get-Content -Raw -LiteralPath (Join-Path $root 'docs\FIRST-USE-ONBOARDING.zh-CN.md')
+    $onboarding = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $root 'docs\FIRST-USE-ONBOARDING.zh-CN.md')
 
     # A. A missing path is reported and no directory is created.
     $missingOutput = Invoke-ExpectedFailure -ScriptPath $workspaceCheck -Arguments @{ ProjectPath = $missingWorkspace }
@@ -108,7 +108,7 @@ Undecided Items: Real platform communication requires manual verification.
     Write-Output 'J interrupted/idempotent recovery: PASS'
 
     # F. Real independent Codex thread communication is a platform/manual gate, not a local simulation.
-    Assert-True ($onboarding -match 'MANUAL_REQUIRED' -and $onboarding -match 'REAL MULTI-CHAT EXECUTION') 'F: onboarding docs do not disclose manual real-thread verification'
+    Assert-True ($onboarding -match 'MANUAL_REQUIRED' -and $onboarding -match '不能用脚本通过替代') 'F: onboarding docs do not disclose manual real-thread verification'
     Write-Output 'F real independent Codex conversations: MANUAL_REQUIRED (not simulated)'
 
     # G/H. MCP checks compare an observed platform target; they do not claim a connection.
@@ -134,7 +134,7 @@ Undecided Items: Real platform communication requires manual verification.
     $events | Set-Content -LiteralPath (Join-Path $governance 'RELAY_EVENTS.jsonl') -Encoding ascii
     $relayOutput = & $relayCheck -ProjectPath $workspace | Out-String
     Assert-True ($relayOutput -match 'Relay validation: PASS') 'I: relay validation failed for the onboarding fixture'
-    Assert-True ($onboarding -match 'Routine relay messages do not require user copy/paste') 'I: onboarding docs do not explain routine relay does not need manual copying'
+    Assert-True ($onboarding -match '普通接力不用你复制消息') 'I: onboarding docs do not explain routine relay does not need manual copying'
     Write-Output 'I relay continuation structure: PASS (not real multi-chat proof)'
 
     Write-Output 'Phase 8 first-use onboarding regression: PASS'

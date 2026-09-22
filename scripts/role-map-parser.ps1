@@ -1,9 +1,20 @@
-Set-StrictMode -Version Latest
-
 function Remove-RoleMapCodeTicks {
     param([AllowNull()][string]$Value)
     if ($null -eq $Value) { return '' }
-    return ($Value.Trim() -replace '^`|`$', '').Trim()
+    return $Value.Trim().Trim([char]96).Trim()
+}
+
+function Get-RoleMapField {
+    param([string]$Text, [string]$Name)
+    $found = [regex]::Matches($Text, '(?im)^\s*' + [regex]::Escape($Name) + '\s*:\s*([^\r\n]*)\r?$')
+    if ($found.Count -gt 1) { throw "ROLE_MAP_MALFORMED: duplicate $Name field" }
+    if ($found.Count -eq 0) { return '' }
+    Remove-RoleMapCodeTicks $found[0].Groups[1].Value
+}
+
+function Test-ConcreteRoleIdentity {
+    param([string]$Value)
+    return (-not [string]::IsNullOrWhiteSpace($Value) -and $Value -notmatch '^(?:\{\{|NOT_|UNKNOWN|UNVERIFIED|UNAVAILABLE|PENDING|CURRENT_THREAD_.*UNAVAILABLE|OUTER_TASK_ID|TASK_ID|EXECUTION_ID|DISPLAY_NAME)')
 }
 
 function Read-RoleMap {
@@ -17,15 +28,21 @@ function Read-RoleMap {
     }
 
     $text = [IO.File]::ReadAllText((Resolve-Path -LiteralPath $Path), [Text.Encoding]::UTF8)
-    $projectMatch = [regex]::Match($text, '(?im)^\s*PROJECT_ID\s*:\s*`?([^`\r\n]+)`?\s*$')
-    $bootstrapMatch = [regex]::Match($text, '(?im)^\s*BOOTSTRAP_STATE\s*:\s*`?(ACTIVE|COMPLETE)`?\s*$')
-    $outerMatch = [regex]::Match($text, '(?im)^\s*OUTER_TASK_ID\s*:\s*`?([^`\r\n]+)`?\s*$')
+    $projectId = Get-RoleMapField $text 'PROJECT_ID'
+    if (-not (Test-ConcreteRoleIdentity $projectId)) { throw 'PROJECT_ID_MISSING: a concrete project identity is required' }
+    $bootstrap = Get-RoleMapField $text 'BOOTSTRAP_STATE'
+    if ($bootstrap -notin @('ACTIVE', 'COMPLETE')) { throw 'BOOTSTRAP_STATE_INVALID: expected ACTIVE or COMPLETE' }
 
     $rows = New-Object System.Collections.Generic.List[object]
-    foreach ($line in ($text -split "`r?`n")) {
+    foreach ($line in ($text -split '\r?\n')) {
         if (-not $line.TrimStart().StartsWith('|')) { continue }
-        $cells = @($line.Trim().Trim('|').Split('|') | ForEach-Object { Remove-RoleMapCodeTicks $_ })
-        if ($cells.Count -ne 7 -or $cells[0] -notin @('CORE_ARCHITECT', 'MISSION_PLANNER', 'BUILD_EXECUTOR', 'EXTERNAL_ADVISOR')) { continue }
+        $trimmed = $line.Trim()
+        $body = $trimmed.Substring(1)
+        if ($body.EndsWith('|')) { $body = $body.Substring(0, $body.Length - 1) }
+        $cells = @($body.Split('|') | ForEach-Object { Remove-RoleMapCodeTicks $_ })
+        if ($cells[0] -notin @('CORE_ARCHITECT', 'MISSION_PLANNER', 'BUILD_EXECUTOR', 'EXTERNAL_ADVISOR')) { continue }
+        if ($cells.Count -ne 7) { throw "ROLE_MAP_MALFORMED: $($cells[0]) must have seven columns" }
+        if (@($rows | Where-Object RoleId -eq $cells[0]).Count) { throw "ROLE_BINDING_CONFLICT: duplicate $($cells[0])" }
         $rows.Add([pscustomobject]@{
             RoleId = $cells[0]
             DisplayName = $cells[1]
@@ -38,9 +55,12 @@ function Read-RoleMap {
     }
 
     [pscustomobject]@{
-        ProjectId = if ($projectMatch.Success) { Remove-RoleMapCodeTicks $projectMatch.Groups[1].Value } else { '' }
-        BootstrapState = if ($bootstrapMatch.Success) { $bootstrapMatch.Groups[1].Value } else { '' }
-        OuterTaskId = if ($outerMatch.Success) { Remove-RoleMapCodeTicks $outerMatch.Groups[1].Value } else { '' }
+        ProjectId = $projectId
+        ProjectPath = Get-RoleMapField $text 'PROJECT_PATH'
+        ProjectName = Get-RoleMapField $text 'PROJECT_NAME'
+        ProjectShortName = Get-RoleMapField $text 'PROJECT_SHORT_NAME'
+        BootstrapState = $bootstrap
+        OuterTaskId = Get-RoleMapField $text 'OUTER_TASK_ID'
         Rows = $rows.ToArray()
     }
 }

@@ -23,10 +23,7 @@ if ([string]::IsNullOrWhiteSpace($ExecutionId) -or $ExecutionId -match '(?i)^(NO
     throw 'BOOTSTRAP_EXECUTION_ID_REQUIRED: select the real bootstrap execution; historical events are never overwritten'
 }
 
-$bindingOutput = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'check-role-bindings.ps1') -RoleMapPath $RoleMapPath 2>&1 | Out-String
-if ($LASTEXITCODE -ne 0 -or $bindingOutput -notmatch 'ROLE_BINDINGS_STRUCTURALLY_VALID') {
-    throw "ROLE_BINDINGS_REQUIRED: $($bindingOutput.Trim())"
-}
+$null = & (Join-Path $PSScriptRoot 'check-role-bindings.ps1') -RoleMapPath $RoleMapPath
 
 $roleMap = Read-RoleMap -Path $RoleMapPath
 $projectId = $roleMap.ProjectId
@@ -40,7 +37,11 @@ $lineNumber = 0
 foreach ($line in [IO.File]::ReadAllLines((Resolve-Path -LiteralPath $EventsPath), [Text.Encoding]::UTF8)) {
     $lineNumber++
     if ([string]::IsNullOrWhiteSpace($line)) { continue }
-    try { $allEvents.Add(($line | ConvertFrom-Json)) } catch { throw "INVALID_RELAY_EVENT_JSON: line $lineNumber" }
+    try {
+        $parsed = $line | ConvertFrom-Json
+        if ($null -eq $parsed -or $parsed -is [array] -or $parsed -isnot [pscustomobject]) { throw 'expected event object' }
+        $allEvents.Add($parsed)
+    } catch { throw "INVALID_RELAY_EVENT_JSON: line $lineNumber" }
 }
 
 $executionEvents = @($allEvents | Where-Object { [string]$_.execution_id -eq $ExecutionId })
@@ -58,6 +59,7 @@ if ($Mode -eq 'Initial' -and $creationEvents.Count -ne 2) { throw "BOOTSTRAP_CRE
 if ($Mode -eq 'Recovery' -and $creationEvents.Count -gt 1) { throw "RECOVERY_CREATED_THREAD_COUNT_INVALID: recovery may create only one genuinely missing role; got $($creationEvents.Count)" }
 $rolesToValidate = if ($Mode -eq 'Initial') { @('MISSION_PLANNER', 'BUILD_EXECUTOR') } else { @($creationEvents | ForEach-Object role_id) }
 foreach ($roleId in $rolesToValidate) {
+    if ($roleId -notin @('MISSION_PLANNER', 'BUILD_EXECUTOR')) { throw "ROLE_CREATION_EVENT_INVALID: $roleId is not a Codex creation role" }
     $matches = @($creationEvents | Where-Object role_id -eq $roleId)
     if ($matches.Count -ne 1) { throw "ROLE_DUPLICATION_OR_UNKNOWN_THREAD: $roleId creation count is $($matches.Count)" }
     $created = $matches[0]
@@ -71,6 +73,19 @@ foreach ($roleId in $rolesToValidate) {
     }
     if (-not $roleTargets.ContainsKey($roleId) -or $roleTargets[$roleId].ThreadId -ne $created.thread_id) {
         throw "CREATED_THREAD_NOT_REGISTERED: $roleId"
+    }
+}
+
+# Recovery must trace current Planner/Executor identities to preserved creation records.
+if ($Mode -eq 'Recovery') {
+    foreach ($roleId in @('MISSION_PLANNER','BUILD_EXECUTOR')) {
+        $history = @($allEvents | Where-Object {
+            $_.event -eq 'ROLE_THREAD_CREATED' -and $_.project_id -eq $projectId -and
+            $_.role_id -eq $roleId -and $_.thread_id -eq $roleTargets[$roleId].ThreadId -and
+            $_.binding_mode -eq 'CREATED_THREAD' -and $_.creation_mode -eq 'ENSURE' -and
+            -not [string]::IsNullOrWhiteSpace([string]$_.evidence)
+        })
+        if ($history.Count -ne 1) { throw "RECOVERY_CREATION_HISTORY_REQUIRED: $roleId must trace to one retained creation record" }
     }
 }
 

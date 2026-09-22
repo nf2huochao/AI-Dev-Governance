@@ -42,14 +42,15 @@ foreach ($entry in @($rows | Where-Object RoleId -in @('MISSION_PLANNER', 'BUILD
 $threadIds = @()
 $targetHandles = @()
 foreach ($entry in $rows) {
-    if ($entry.RoleId -eq 'EXTERNAL_ADVISOR' -and $entry.BindingStatus -eq 'PENDING_BOOTSTRAP') { continue }
+    # The Advisor is a ChatGPT conversation, not a Codex message destination.
+    if ($entry.RoleId -eq 'EXTERNAL_ADVISOR') { continue }
     foreach ($field in @('DisplayName', 'ThreadId', 'TargetHandle')) {
         if ([string]::IsNullOrWhiteSpace($entry.$field)) { throw "ROLE_BINDING_INCOMPLETE: $($entry.RoleId) requires DISPLAY_NAME, THREAD_ID and COMMUNICATION_TARGET_HANDLE" }
     }
-    if ($entry.ThreadId -match '(?i)^(UNVERIFIED|UNKNOWN|NOT_CREATED|CURRENT_THREAD_ID_UNAVAILABLE|OUTER_TASK_ID|TASK_ID|EXECUTION_ID|DISPLAY_NAME)') {
+    if (-not (Test-ConcreteRoleIdentity $entry.ThreadId)) {
         throw "ROLE_BINDING_INCOMPLETE: $($entry.RoleId) has no bound THREAD_ID"
     }
-    if ($entry.TargetHandle -match '(?i)^(UNVERIFIED|UNKNOWN|NOT_CREATED|CURRENT_THREAD_TARGET_UNAVAILABLE|OUTER_TASK_ID|TASK_ID|EXECUTION_ID|DISPLAY_NAME)') {
+    if (-not (Test-ConcreteRoleIdentity $entry.TargetHandle)) {
         throw "ROLE_BINDING_INCOMPLETE: $($entry.RoleId) has no bound COMMUNICATION_TARGET_HANDLE"
     }
     if ($entry.ThreadId -eq $entry.DisplayName -or $entry.TargetHandle -eq $entry.DisplayName) {
