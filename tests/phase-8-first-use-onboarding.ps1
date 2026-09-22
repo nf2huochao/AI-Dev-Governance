@@ -99,7 +99,8 @@ Undecided Items: Real platform communication requires manual verification.
     $summaryBefore = Get-FileHash -LiteralPath (Join-Path $governance 'PROJECT-STARTUP-SUMMARY.md')
     $approvedChanged = $approved + "`nChanged after first init for idempotence check.`n"
     $approvedChanged | Set-Content -LiteralPath $summary -Encoding utf8
-    & $init -ProjectPath $workspace -ApprovedSummaryPath $summary -ProjectName 'First Use Test Project' -ProjectShortName 'fut' -HumanGovernor 'Human Governor Test' -ExternalAdvisorDisplayName 'fut-advisor' -CoreArchitectDisplayName 'fut-architect' -MissionPlannerDisplayName 'fut-planner' -BuildExecutorDisplayName 'fut-executor' | Out-Null
+    $conflictOutput = Invoke-ExpectedFailure -ScriptPath $init -Arguments @{ ProjectPath=$workspace; ApprovedSummaryPath=$summary; ProjectName='First Use Test Project'; ProjectShortName='fut'; HumanGovernor='Human Governor Test'; ExternalAdvisorDisplayName='fut-advisor'; CoreArchitectDisplayName='fut-architect'; MissionPlannerDisplayName='fut-planner'; BuildExecutorDisplayName='fut-executor' }
+    Assert-True ($conflictOutput -match 'APPROVED_SUMMARY_CONFLICT') 'J: changed approved summary did not fail closed'
     Assert-True ((Get-FileHash -LiteralPath (Join-Path $governance 'PROJECT-STARTUP-SUMMARY.md')).Hash -eq $summaryBefore.Hash) 'J: rerun overwrote the original approved summary'
     Assert-True ((Get-FileHash -LiteralPath (Join-Path $governance 'roles\build-executor.md')).Hash -eq $executorBefore.Hash) 'J: rerun overwrote an existing role prompt'
     Write-Output 'D approved project records: PASS'
@@ -123,12 +124,12 @@ Undecided Items: Real platform communication requires manual verification.
     # I. Existing relay validation remains compatible; this is structural evidence only,
     # never proof of real independent conversations.
     $events = @(
-        '{"event":"DISPATCH","task_id":"TASK-ONBOARD-001","actor":"mission-planner","status":"DISPATCH"}',
-        '{"event":"ACK","task_id":"TASK-ONBOARD-001","actor":"build-executor","status":"ACK"}',
-        '{"event":"WORKING","task_id":"TASK-ONBOARD-001","actor":"build-executor","status":"WORKING"}',
-        '{"event":"HANDOFF","task_id":"TASK-ONBOARD-001","actor":"build-executor","status":"HANDOFF"}',
-        '{"event":"REVIEW","task_id":"TASK-ONBOARD-001","actor":"mission-planner","status":"REVIEW"}',
-        '{"event":"PASS","task_id":"TASK-ONBOARD-001","actor":"mission-planner","status":"PASS"}'
+        '{"event":"DISPATCH","project_id":"fut","mission_id":"M1","task_id":"TASK-ONBOARD-001","execution_id":"E1","actor":"mission-planner","status":"DISPATCH"}',
+        '{"event":"ACK","project_id":"fut","mission_id":"M1","task_id":"TASK-ONBOARD-001","execution_id":"E1","actor":"build-executor","status":"ACK"}',
+        '{"event":"WORKING","project_id":"fut","mission_id":"M1","task_id":"TASK-ONBOARD-001","execution_id":"E1","actor":"build-executor","status":"WORKING"}',
+        '{"event":"HANDOFF","project_id":"fut","mission_id":"M1","task_id":"TASK-ONBOARD-001","execution_id":"E1","actor":"build-executor","status":"HANDOFF"}',
+        '{"event":"REVIEW","project_id":"fut","mission_id":"M1","task_id":"TASK-ONBOARD-001","execution_id":"E1","actor":"mission-planner","status":"REVIEW"}',
+        '{"event":"PASS","project_id":"fut","mission_id":"M1","task_id":"TASK-ONBOARD-001","execution_id":"E1","actor":"mission-planner","status":"PASS"}'
     )
     $events | Set-Content -LiteralPath (Join-Path $governance 'RELAY_EVENTS.jsonl') -Encoding ascii
     $relayOutput = & $relayCheck -ProjectPath $workspace | Out-String

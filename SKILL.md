@@ -84,10 +84,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <skill-root>\scripts\validat
 powershell -NoProfile -ExecutionPolicy Bypass -File <skill-root>\scripts\check-relay.ps1 -ProjectPath .
 powershell -NoProfile -ExecutionPolicy Bypass -File <skill-root>\scripts\check-role-bindings.ps1 -RoleMapPath .\.ai-governance\ROLE-MAP.md
 powershell -NoProfile -ExecutionPolicy Bypass -File <skill-root>\scripts\check-bootstrap.ps1 -EventsPath .\.ai-governance\RELAY_EVENTS.jsonl -RoleMapPath .\.ai-governance\ROLE-MAP.md -ExecutionId <execution-id>
-powershell -NoProfile -ExecutionPolicy Bypass -File <skill-root>\scripts\check-startup-readiness.ps1 -RoleMapPath .\.ai-governance\ROLE-MAP.md -EventsPath .\.ai-governance\RELAY_EVENTS.jsonl -ExecutionId <execution-id> -PlatformEvidencePath <platform-evidence.json> -McpEvidencePath <mcp-evidence.txt> -ApprovedSummaryPath .\.ai-governance\PROJECT-STARTUP-SUMMARY.md
+powershell -NoProfile -ExecutionPolicy Bypass -File <skill-root>\scripts\check-startup-readiness.ps1 -RoleMapPath .\.ai-governance\ROLE-MAP.md -EventsPath .\.ai-governance\RELAY_EVENTS.jsonl -ExecutionId <execution-id> -PlatformEvidencePath <platform-evidence.json> -McpEvidencePath <mcp-evidence.txt> -ApprovedSummaryPath .\.ai-governance\PROJECT-STARTUP-SUMMARY.md -HumanAuthorizationPath <human-authorization.json>
 ```
 
-正式 `RELAY_EVENTS.jsonl` 初始化为空文件；`examples/RELAY_EVENTS.bootstrap.example.jsonl` 仅是字段示例，不能复制为运行日志。`check-startup-readiness.ps1` 会检查确定性前置条件并要求原始平台/MCP材料，但当前 Skill 没有 Codex 原生证据认证接口，因此当前环境固定保持 `MANUAL_REQUIRED`，不得把人工填写的 `VERIFIED` 或发送成功当成首个 Mission 的放行证据。
+正式 `RELAY_EVENTS.jsonl` 初始化为空文件；`examples/RELAY_EVENTS.bootstrap.example.jsonl` 仅是字段示例，不能复制为运行日志。`check-startup-readiness.ps1` 会检查确定性前置条件并要求原始平台/MCP材料。当前 Skill 没有 Codex 原生证据认证接口，因此平台证据来源保持未认证；Human Governor 独立检查原始材料后，可提交与当前项目、执行、角色表、摘要和证据哈希绑定的 `HUMAN_VERIFIED` 授权回执。它只记录人工授权，绝不改写成 `PLATFORM_VERIFIED`。
 
 ## Normal relay
 
@@ -116,11 +116,11 @@ PASS → next TASK
 - `governance/`：可复制到项目的治理模板；
 - `scripts/`：确定性机械检查；
 - `examples/`：最小初始化示例；
-- `SPEC-V0.1.md`：唯一产品基线。
+- `SPEC-V0.1.md`：仅是 AI 开发治理局 Skill 自身的产品基线；用户项目需求基线是 `.ai-governance/PROJECT-STARTUP-SUMMARY.md`。
 
 ## Scripts and limits
 
-`init-governance.ps1` 只创建缺失的治理文件，不覆盖已有文件。
+`init-governance.ps1` 只创建缺失的治理文件，不覆盖已有文件；重复初始化会先核对项目身份和已批准摘要哈希，不一致时停止，不能混合两个项目或两个批准版本。
 
 `validate-governance.ps1` 检查文件完整性、角色 Prompt 和 JSONL 基本格式。
 

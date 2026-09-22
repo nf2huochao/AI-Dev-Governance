@@ -7,10 +7,14 @@ param(
     [string]$RoleMapPath,
 
     [Parameter(Mandatory = $true)]
-    [string]$ExecutionId
+    [string]$ExecutionId,
+
+    [ValidateSet('Initial', 'Recovery')]
+    [string]$Mode = 'Initial'
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'role-map-parser.ps1')
 
 if (-not (Test-Path -LiteralPath $EventsPath)) {
     throw "RELAY_EVENTS_NOT_FOUND: $EventsPath"
@@ -24,25 +28,16 @@ if ($LASTEXITCODE -ne 0 -or $bindingOutput -notmatch 'ROLE_BINDINGS_STRUCTURALLY
     throw "ROLE_BINDINGS_REQUIRED: $($bindingOutput.Trim())"
 }
 
-$roleMapText = Get-Content -Raw -LiteralPath $RoleMapPath
-$projectMatch = [regex]::Match($roleMapText, '(?im)^\s*PROJECT_ID\s*:\s*(\S+)\s*$')
-$projectId = $projectMatch.Groups[1].Value
+$roleMap = Read-RoleMap -Path $RoleMapPath
+$projectId = $roleMap.ProjectId
 $roleTargets = @{}
-foreach ($line in ($roleMapText -split "`r?`n")) {
-    $row = [regex]::Match($line, '^\|\s*[\x60]?(CORE_ARCHITECT|MISSION_PLANNER|BUILD_EXECUTOR|EXTERNAL_ADVISOR)[\x60]?\s*\|\s*[\x60]?([^|]+?)[\x60]?\s*\|\s*[\x60]?([^|]+?)[\x60]?\s*\|\s*[\x60]?([^|]+?)[\x60]?\s*\|\s*[\x60]?([^|]+?)[\x60]?\s*\|\s*[\x60]?([^|]+?)[\x60]?\s*\|\s*[\x60]?([^|]+?)[\x60]?\s*\|\s*$')
-    if ($row.Success) {
-        $roleTargets[$row.Groups[1].Value] = [pscustomobject]@{
-            BindingMode = $row.Groups[3].Value.Trim()
-            CreationMode = $row.Groups[4].Value.Trim()
-            ThreadId = $row.Groups[5].Value.Trim()
-            TargetHandle = $row.Groups[6].Value.Trim()
-        }
-    }
+foreach ($row in $roleMap.Rows) {
+    $roleTargets[$row.RoleId] = $row
 }
 
 $allEvents = New-Object System.Collections.Generic.List[object]
 $lineNumber = 0
-foreach ($line in (Get-Content -LiteralPath $EventsPath)) {
+foreach ($line in [IO.File]::ReadAllLines((Resolve-Path -LiteralPath $EventsPath), [Text.Encoding]::UTF8)) {
     $lineNumber++
     if ([string]::IsNullOrWhiteSpace($line)) { continue }
     try { $allEvents.Add(($line | ConvertFrom-Json)) } catch { throw "INVALID_RELAY_EVENT_JSON: line $lineNumber" }
@@ -50,16 +45,19 @@ foreach ($line in (Get-Content -LiteralPath $EventsPath)) {
 
 $executionEvents = @($allEvents | Where-Object { [string]$_.execution_id -eq $ExecutionId })
 if ($executionEvents.Count -eq 0) { throw "BOOTSTRAP_EXECUTION_NOT_FOUND: no events for EXECUTION_ID=$ExecutionId" }
-$unknownEvents = @($executionEvents | Where-Object { [string]$_.event -notin @('ROLE_THREAD_CREATED', 'BOOTSTRAP_HELLO', 'BOOTSTRAP_ACK') })
+$handshakeNames = if ($Mode -eq 'Initial') { @('BOOTSTRAP_HELLO', 'BOOTSTRAP_ACK') } else { @('RECOVERY_HELLO', 'RECOVERY_ACK') }
+$allowedEvents = @('ROLE_THREAD_CREATED') + $handshakeNames
+$unknownEvents = @($executionEvents | Where-Object { [string]$_.event -notin $allowedEvents })
 if ($unknownEvents.Count -gt 0) { throw "BOOTSTRAP_SCOPE_INVALID: unexpected event $($unknownEvents[0].event) before Bootstrap completion" }
 
 $creationEvents = @($executionEvents | Where-Object event -eq 'ROLE_THREAD_CREATED')
 if (@($creationEvents | Where-Object role_id -eq 'CORE_ARCHITECT').Count -gt 0) {
     throw 'UNEXPECTED_CORE_ARCHITECT_CREATION: CORE_ARCHITECT_CREATION_FORBIDDEN; CURRENT_CONTEXT_MUST_BE_REUSED'
 }
-if ($creationEvents.Count -gt 2) { throw "ROLE_DUPLICATION_OR_UNKNOWN_THREAD: expected 2 new Codex threads, got $($creationEvents.Count)" }
-if ($creationEvents.Count -ne 2) { throw "BOOTSTRAP_CREATED_THREAD_COUNT_INVALID: EXPECTED_NEW_CODEX_THREADS=2; got $($creationEvents.Count)" }
-foreach ($roleId in @('MISSION_PLANNER', 'BUILD_EXECUTOR')) {
+if ($Mode -eq 'Initial' -and $creationEvents.Count -ne 2) { throw "BOOTSTRAP_CREATED_THREAD_COUNT_INVALID: EXPECTED_NEW_CODEX_THREADS=2; got $($creationEvents.Count)" }
+if ($Mode -eq 'Recovery' -and $creationEvents.Count -gt 1) { throw "RECOVERY_CREATED_THREAD_COUNT_INVALID: recovery may create only one genuinely missing role; got $($creationEvents.Count)" }
+$rolesToValidate = if ($Mode -eq 'Initial') { @('MISSION_PLANNER', 'BUILD_EXECUTOR') } else { @($creationEvents | ForEach-Object role_id) }
+foreach ($roleId in $rolesToValidate) {
     $matches = @($creationEvents | Where-Object role_id -eq $roleId)
     if ($matches.Count -ne 1) { throw "ROLE_DUPLICATION_OR_UNKNOWN_THREAD: $roleId creation count is $($matches.Count)" }
     $created = $matches[0]
@@ -76,14 +74,14 @@ foreach ($roleId in @('MISSION_PLANNER', 'BUILD_EXECUTOR')) {
     }
 }
 
-$events = @($executionEvents | Where-Object { [string]$_.event -in @('BOOTSTRAP_HELLO', 'BOOTSTRAP_ACK') })
+$events = @($executionEvents | Where-Object { [string]$_.event -in $handshakeNames })
 if ($events.Count -ne 4) { throw "BOOTSTRAP_EVENT_COUNT_INVALID: expected 4 HELLO/ACK events for EXECUTION_ID=$ExecutionId, got $($events.Count); historical events were preserved" }
 
 $expected = @(
-    @{ Event = 'BOOTSTRAP_HELLO'; Role = 'CORE_ARCHITECT'; TargetRole = 'MISSION_PLANNER'; Status = 'SENT' },
-    @{ Event = 'BOOTSTRAP_ACK'; Role = 'MISSION_PLANNER'; TargetRole = 'CORE_ARCHITECT'; Status = 'RECEIVED_AND_REPLIED' },
-    @{ Event = 'BOOTSTRAP_HELLO'; Role = 'MISSION_PLANNER'; TargetRole = 'BUILD_EXECUTOR'; Status = 'SENT' },
-    @{ Event = 'BOOTSTRAP_ACK'; Role = 'BUILD_EXECUTOR'; TargetRole = 'MISSION_PLANNER'; Status = 'RECEIVED_AND_REPLIED' }
+    @{ Event = $handshakeNames[0]; Role = 'CORE_ARCHITECT'; TargetRole = 'MISSION_PLANNER'; Status = 'SENT' },
+    @{ Event = $handshakeNames[1]; Role = 'MISSION_PLANNER'; TargetRole = 'CORE_ARCHITECT'; Status = 'RECEIVED_AND_REPLIED' },
+    @{ Event = $handshakeNames[0]; Role = 'MISSION_PLANNER'; TargetRole = 'BUILD_EXECUTOR'; Status = 'SENT' },
+    @{ Event = $handshakeNames[1]; Role = 'BUILD_EXECUTOR'; TargetRole = 'MISSION_PLANNER'; Status = 'RECEIVED_AND_REPLIED' }
 )
 
 for ($i = 0; $i -lt $expected.Count; $i++) {
@@ -116,5 +114,5 @@ for ($i = 0; $i -lt $expected.Count; $i++) {
 }
 
 Write-Output "BOOTSTRAP_COMMUNICATION_STRUCTURALLY_VALID: EXECUTION_ID=$ExecutionId; identity, order, evidence references and registered communication targets are structurally consistent"
-Write-Output 'BOOTSTRAP_TEAM_STRUCTURALLY_VALID: CORE_ARCHITECT_SOURCE=CURRENT_ORIGINAL_CONVERSATION; EXPECTED_NEW_CODEX_THREADS=2; actual_new_threads=2'
+Write-Output "BOOTSTRAP_TEAM_STRUCTURALLY_VALID: MODE=$Mode; CORE_ARCHITECT_SOURCE=CURRENT_ORIGINAL_CONVERSATION; actual_new_threads=$($creationEvents.Count)"
 Write-Output 'PLATFORM_DELIVERY_AND_WAKE: optional native message IDs are preserved when present; execution references, target threads and raw records require independent platform review'

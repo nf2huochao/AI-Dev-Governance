@@ -1,0 +1,24 @@
+name: Windows regression
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        shell: [powershell, pwsh]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run regression suite
+        shell: ${{ matrix.shell }}
+        run: |
+          $failed = @()
+          foreach ($test in Get-ChildItem ./tests/*.ps1 | Sort-Object Name) {
+            & $test.FullName
+            if (-not $?) { $failed += $test.Name }
+          }
+          if ($failed.Count) { throw "Failed tests: $($failed -join ', ')" }

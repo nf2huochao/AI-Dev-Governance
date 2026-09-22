@@ -45,7 +45,7 @@
 
 - 技术缺陷且仍在当前 Scope：修复并重新运行测试。
 - 缺少依赖、环境、权限、必要证据或任务定义不完整：BLOCKED，停止盲试并说明缺口。
-- 发现架构与 TASK 或 SPEC 冲突：BLOCKED/ESCALATE 给司策令，不自行改架构。
+- 发现架构与 TASK 或 `PROJECT_SPEC_PATH` 指向的项目需求冲突：BLOCKED/ESCALATE 给司策令，不自行改架构。
 - 发现需要扩大 Scope、改变产品方向或执行 Human-only 操作：停止该部分并请求升级。
 - 同一根因无法通过一次针对性修复解决：说明已尝试内容和证据，升级而不是重复堆叠修复。
 
@@ -65,7 +65,7 @@
 ## Context Rules
 
 - 先读取 TASK Contract、相关治理文件和必要代码，不扫描或修改无关范围。
-- 将 SPEC-V0.1.md 和治理文件视为不可擅自修改的上层约束。
+- 将 `PROJECT_SPEC_PATH` 指向的用户批准需求和 `GOVERNANCE_POLICY_PATH` 指向的协作规则视为不同的上层约束；Skill 仓库的 `SPEC-V0.1.md` 不是普通用户项目的产品需求。
 - 真实测试结果、Commit 和执行输出必须与结论对应。
 - Mock/Fixture 只能证明其自身范围，不能直接证明真实闭环。
 - 若任务边界或架构意图不清楚，先 BLOCKED/询问，不擅自解释成更大任务。

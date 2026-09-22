@@ -36,8 +36,8 @@ Assert-True (Test-Path -LiteralPath $guardPath) 'Missing deterministic role-crea
 $coreGuard = Invoke-ExpectedFailure -ScriptPath $guardPath -Arguments @{ RoleId = 'CORE_ARCHITECT' }
 Assert-True ($coreGuard -match 'CORE_ARCHITECT_CREATION_FORBIDDEN' -and $coreGuard -match 'CURRENT_CONTEXT_MUST_BE_REUSED') 'Core Architect reached the create-thread route'
 foreach ($roleId in @('MISSION_PLANNER', 'BUILD_EXECUTOR')) {
-    $guardOutput = & powershell -NoProfile -ExecutionPolicy Bypass -File $guardPath -RoleId $roleId | Out-String
-    Assert-True ($LASTEXITCODE -eq 0 -and $guardOutput -match 'ROLE_CREATION_ALLOWED') "$roleId was not allowed through the guarded create-thread route"
+    $guardOutput = Invoke-ExpectedFailure -ScriptPath $guardPath -Arguments @{ RoleId = $roleId }
+    Assert-True ($guardOutput -match 'ROLE_MAP_REQUIRED') "$roleId creation did not fail closed without ROLE-MAP"
 }
 
 $artifactRoot = Join-Path $root '.test-artifacts\phase-8-current-context-core-binding'
@@ -94,7 +94,7 @@ OUTER_TASK_ID: NOT_A_ROUTING_TARGET
     $bootstrapEvents | Set-Content -LiteralPath $eventsPath -Encoding utf8
 
     $bootstrapOutput = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'scripts\check-bootstrap.ps1') -EventsPath $eventsPath -RoleMapPath $boundRoleMapPath -ExecutionId 'bootstrap-001' | Out-String
-    Assert-True ($bootstrapOutput -match 'EXPECTED_NEW_CODEX_THREADS=2' -and $bootstrapOutput -match 'CORE_ARCHITECT_SOURCE=CURRENT_ORIGINAL_CONVERSATION') 'Bootstrap did not assert the two-thread current-context model'
+    Assert-True ($bootstrapOutput -match 'actual_new_threads=2' -and $bootstrapOutput -match 'CORE_ARCHITECT_SOURCE=CURRENT_ORIGINAL_CONVERSATION') 'Bootstrap did not assert the two-thread current-context model'
 
     $thirdThreadEventsPath = Join-Path $artifactRoot 'RELAY_EVENTS-THIRD-THREAD.jsonl'
     $thirdThread = '{"event":"ROLE_THREAD_CREATED","project_id":"demo-project","execution_id":"bootstrap-001","role_id":"CORE_ARCHITECT","thread_id":"thread-core-new","binding_mode":"CREATED_THREAD","creation_mode":"ENSURE","evidence":"unexpected-create-result"}'

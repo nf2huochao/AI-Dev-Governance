@@ -27,7 +27,7 @@ SEND → YIELD → WAKE → ACT
 
 正式接力前必须先完成 Team-First Bootstrap：当前原始 Codex 对话执行 `BIND_CURRENT_CONTEXT_AS_CORE_ARCHITECT`，生命周期为 `CURRENT_CONTEXT / REUSE_CURRENT`；只建立一个 `MISSION_PLANNER` 和一个 `BUILD_EXECUTOR`，新增 Codex 线程数必须恰好为 2，并完成两组 `BOOTSTRAP_HELLO → BOOTSTRAP_ACK`。任何 Core Architect 创建事件或第三个新线程都使 Bootstrap 失败，不得创建 Mission、TASK 或业务代码。
 
-每个通信记录必须分开保存 `PROJECT_ID`、`ROLE_ID`、`THREAD_ID`、`TASK_ID`、`EXECUTION_ID` 和可选的 `OUTER_TASK_ID`。发送目标只能是已验证的 `THREAD_ID`；不得使用显示名、TASK_ID、EXECUTION_ID 或 OUTER_TASK_ID 路由消息。
+每个通信记录必须分开保存 `PROJECT_ID`、`ROLE_ID`、`THREAD_ID`、`COMMUNICATION_TARGET_HANDLE`、`TASK_ID`、`EXECUTION_ID` 和可选的 `OUTER_TASK_ID`。`THREAD_ID` 表示线程身份；发送目标必须使用原生消息工具实际要求且已经核实的 `COMMUNICATION_TARGET_HANDLE`。只有平台契约证明二者相同时才可记录同值；不得根据字段名猜测，也不得使用显示名、TASK_ID、EXECUTION_ID 或 OUTER_TASK_ID 路由消息。
 
 | Activity | Owner | Boundary |
 |---|---|---|
@@ -66,6 +66,7 @@ REVIEW → ESCALATE
 | WORKING | HANDOFF | Build Executor | 改动、测试、Commit、Evidence |
 | WORKING | BLOCKED | Build Executor | 明确阻断条件和已尝试内容 |
 | HANDOFF | REVIEW | Mission Planner | Handoff 已收到 |
+| HANDOFF | BLOCKED | Mission Planner | Handoff 证据缺失或无法进入 Review，记录阻断 |
 | REVIEW | PASS | Mission Planner | Acceptance Criteria 全部满足 |
 | REVIEW | REWORK | Mission Planner | 明确缺陷、根因仍在当前 Scope |
 | REVIEW | BLOCKED | Mission Planner | 缺前置条件、证据或无法继续 |
@@ -73,6 +74,7 @@ REVIEW → ESCALATE
 | PASS | DISPATCH | Mission Planner | 下一 TASK 仍属于当前 Mission |
 | REWORK | WORKING | Build Executor | 收到范围内针对性修正 |
 | BLOCKED | ESCALATE | Mission Planner | 记录阻断并向上升级 |
+| ESCALATE | DISPATCH | Mission Planner | 必须包含有效 `resolution_ref`，证明受影响路线已获解除决定 |
 
 其他状态转换均为非法，不能通过改写状态文字绕过。
 
@@ -153,7 +155,9 @@ PASS 不允许成为无限扩大当前任务的理由。
 每个状态转换应追加一条事件，不修改旧事件。事件至少包含：
 
 ```json
-{"event":"DISPATCH","task_id":"TASK-001","actor":"mission-planner","timestamp":"..."}
+{"event":"DISPATCH","status":"DISPATCH","project_id":"PROJECT-001","mission_id":"MISSION-001","task_id":"TASK-001","execution_id":"EXEC-001","actor":"mission-planner","timestamp":"..."}
 ```
 
 事件顺序、执行者身份和状态必须能解释当前接力；异常状态不得被静默删除或覆盖。
+
+机器可读的必填字段、角色规则和状态转换唯一来源是 [`relay-contract.json`](relay-contract.json)。脚本、文档示例与测试必须以该文件为准；`event` 与 `status` 必须一致，传输状态不得冒充任务状态。

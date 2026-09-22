@@ -1,0 +1,11 @@
+{
+  "authorization_decision": "ALLOW_FIRST_MISSION",
+  "verification_status": "HUMAN_VERIFIED",
+  "authorized_by": "HUMAN_GOVERNOR",
+  "project_id": "REPLACE_WITH_PROJECT_ID",
+  "execution_id": "REPLACE_WITH_BOOTSTRAP_EXECUTION_ID",
+  "role_map_sha256": "REPLACE_WITH_SHA256",
+  "approved_summary_sha256": "REPLACE_WITH_SHA256",
+  "platform_evidence_sha256": "REPLACE_WITH_SHA256",
+  "mcp_evidence_sha256": "REPLACE_WITH_SHA256"
+}

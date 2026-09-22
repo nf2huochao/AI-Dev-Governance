@@ -141,12 +141,12 @@ try {
     $governanceRoot = Join-Path $fixtureRoot '.ai-governance'
     New-Item -ItemType Directory -Path $governanceRoot -Force | Out-Null
     @(
-        '{"event":"DISPATCH","task_id":"TASK-EVENT-001","actor":"mission-planner","status":"DISPATCH"}',
-        '{"event":"ACK","task_id":"TASK-EVENT-001","actor":"build-executor","status":"ACK"}',
-        '{"event":"WORKING","task_id":"TASK-EVENT-001","actor":"build-executor","status":"WORKING"}',
-        '{"event":"HANDOFF","task_id":"TASK-EVENT-001","actor":"build-executor","status":"HANDOFF"}',
-        '{"event":"REVIEW","task_id":"TASK-EVENT-001","actor":"mission-planner","status":"REVIEW"}',
-        '{"event":"PASS","task_id":"TASK-EVENT-001","actor":"mission-planner","status":"PASS"}'
+        '{"event":"DISPATCH","project_id":"P","mission_id":"M","task_id":"TASK-EVENT-001","execution_id":"E","actor":"mission-planner","status":"DISPATCH"}',
+        '{"event":"ACK","project_id":"P","mission_id":"M","task_id":"TASK-EVENT-001","execution_id":"E","actor":"build-executor","status":"ACK"}',
+        '{"event":"WORKING","project_id":"P","mission_id":"M","task_id":"TASK-EVENT-001","execution_id":"E","actor":"build-executor","status":"WORKING"}',
+        '{"event":"HANDOFF","project_id":"P","mission_id":"M","task_id":"TASK-EVENT-001","execution_id":"E","actor":"build-executor","status":"HANDOFF"}',
+        '{"event":"REVIEW","project_id":"P","mission_id":"M","task_id":"TASK-EVENT-001","execution_id":"E","actor":"mission-planner","status":"REVIEW"}',
+        '{"event":"PASS","project_id":"P","mission_id":"M","task_id":"TASK-EVENT-001","execution_id":"E","actor":"mission-planner","status":"PASS"}'
     ) | Set-Content -LiteralPath (Join-Path $governanceRoot 'RELAY_EVENTS.jsonl') -Encoding ascii
 
     $validator = Join-Path $repoRoot 'scripts\check-relay.ps1'

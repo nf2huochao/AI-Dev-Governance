@@ -27,7 +27,7 @@ foreach ($forbidden in @('.git', 'tests', '.test-artifacts', 'PHASE-8-FIRST-USE-
 try {
     if (Test-Path -LiteralPath $artifactRoot) { Remove-Item -LiteralPath $artifactRoot -Recurse -Force }
     $installTarget = Join-Path $artifactRoot 'isolated-skill'
-    $installOutput = & $installerPath -SourcePath $root -TargetPath $installTarget | Out-String
+    $installOutput = & $installerPath -SourcePath $root -TargetPath $installTarget -DiscoveryRoots @((Join-Path $artifactRoot 'discovery')) | Out-String
     Assert-True ($installOutput -match 'Local Skill installation: PASS') 'Isolated Skill installation did not pass'
     foreach ($required in @('SKILL.md', 'roles\core-architect.md', 'roles\mission-planner.md', 'roles\build-executor.md', 'roles\external-advisor.md', 'docs\FIRST-USE-ONBOARDING.zh-CN.md', 'scripts\init-governance.ps1')) {
         Assert-True (Test-Path -LiteralPath (Join-Path $installTarget $required)) "Installed package is missing: $required"

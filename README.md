@@ -2,6 +2,10 @@
 
 # AI 开发治理局 / AI Dev Governance
 
+> 启动顺序：`TEAM_FIRST_BOOTSTRAP`——先绑定原始天枢核，建立司策令与执造者并验证通信，再规划项目和授权开发。
+>
+> 验证状态：`EXTERNAL_VALIDATION_IN_PROGRESS`。脚本回归通过不等于所有 Codex 版本上的真实多对话、唤醒和 MCP 均已验证。
+
 > **一句话定义**
 >
 > 一套面向 **ChatGPT Plus + Codex** 用户的开源 AI 开发治理 Skill，通过“外参师、天枢核、司策令、执造者”四角色协作，让长期软件开发更可监督、可纠偏、可接力。

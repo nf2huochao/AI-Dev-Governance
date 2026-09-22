@@ -18,7 +18,7 @@
 
 ## 基础通信失败
 
-先运行 `check-role-bindings.ps1`，确认通信目标是已验证的 `THREAD_ID`，不是显示名、TASK_ID、EXECUTION_ID 或 OUTER_TASK_ID。然后只检查两组 `BOOTSTRAP_HELLO → BOOTSTRAP_ACK`；没有真实收发、送达或唤醒证据时保持 `MANUAL_REQUIRED` / `CAPABILITY GAP`，不得派发 Mission、TASK、重复发送或轮询掩盖失败。`check-bootstrap.ps1` 只验证记录结构，不把脚本 PASS 当成平台通信 PASS。
+先运行 `check-role-bindings.ps1`，确认通信目标是平台工具要求且已核实的 `COMMUNICATION_TARGET_HANDLE`，不是显示名、TASK_ID、EXECUTION_ID 或 OUTER_TASK_ID。恢复时使用新的执行 ID 记录 `RECOVERY_HELLO → RECOVERY_ACK`，并运行 `check-bootstrap.ps1 -Mode Recovery`；允许复用全部角色（零创建）或只补建一个真正缺失的角色，不得重建天枢核或重复有效角色。没有真实收发、送达或唤醒证据时保持 `MANUAL_REQUIRED` / `CAPABILITY GAP`。结构 PASS 不等于平台通信 PASS。
 
 ## MCP 错误或不可用
 

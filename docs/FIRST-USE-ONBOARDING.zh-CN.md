@@ -22,9 +22,9 @@ git clone --depth 1 --branch v0.1.0-beta.1 https://github.com/nf2huochao/AI-Dev-
 powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $tmp 'scripts/install-local-skill.ps1')
 ```
 
-脚本默认安装到当前 Windows 用户目录下的 `.codex\skills\ai-dev-governance-v0.1.0-beta.1`，不会写死用户名，也不会覆盖已有目录。目标目录已存在时，脚本会停止并提示；请先备份旧版本，或在命令末尾添加 `-TargetPath` 指定新的隔离目录。
+脚本默认安装到当前 Windows 用户目录下的 `.agents\skills\ai-dev-governance`，使用稳定名称；同时检查 `.agents\skills` 与兼容目录 `.codex\skills` 中是否已有同名 Skill。发现重复时会停止，不会覆盖。复制先进入临时目录，通过完整性检查后才一次性落盘。
 
-安装后重新打开 Codex，在新对话中调用 `ai-dev-governance`。如果没有出现，不要开始项目初始化，先检查当前用户的 `.codex\skills` 目录和安装目录中的 `SKILL.md` 元数据。
+安装后重新打开 Codex，在新对话中调用 `ai-dev-governance`。如果没有出现，不要开始项目初始化，先检查当前用户的 `.agents\skills\ai-dev-governance\SKILL.md`；旧版 Codex 若使用 `.codex\skills`，请通过 `-TargetPath` 明确选择，并避免留下同名双份安装。
 
 ## 1. 第一次调用：唯一 CORE_ARCHITECT / BOOTSTRAP
 
@@ -152,6 +152,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <skill-root>\scripts\check-s
   -ApprovedSummaryPath <project-path>\.ai-governance\PROJECT-STARTUP-SUMMARY.md
 ```
 
-当前 Skill 没有 Codex 原生线程/消息/执行记录的认证接口，因此 `check-startup-readiness.ps1` 会在保留原始材料后返回 `MANUAL_REQUIRED`，不会输出可自动放行的 `STARTUP_READINESS_PASS`。人工填写的 JSON、`VERIFIED_BY_PLATFORM`、发送工具成功返回或自填消息 ID 都不能替代独立人工核验；Human Governor 必须在真实独立项目中审查原始工具返回、目标线程和接收方回传后，才能决定是否发布首个 Mission。
+当前 Skill 没有 Codex 原生线程/消息/执行记录的认证接口，因此没有 Human Governor 授权回执时，`check-startup-readiness.ps1` 返回 `MANUAL_REQUIRED`。人工填写的 `VERIFIED_BY_PLATFORM`、发送工具成功返回或自填消息 ID 都不能替代独立核验。Human Governor 审查原始工具返回、目标线程、接收方回传和 MCP 目标后，可基于 `governance/STARTUP-AUTHORIZATION.template.json` 生成授权回执；脚本会把它与当前项目、执行、角色表、批准摘要和证据 SHA-256 绑定。任何内容变化都会令旧授权失效；结果仍标记 `HUMAN_VERIFIED / platform_attestation=false`。
 
 失败恢复见 [FAILURE-RECOVERY.zh-CN.md](FAILURE-RECOVERY.zh-CN.md)。

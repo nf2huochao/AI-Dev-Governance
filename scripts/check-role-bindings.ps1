@@ -5,36 +5,17 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'role-map-parser.ps1')
 
-if (-not (Test-Path -LiteralPath $RoleMapPath)) { throw "ROLE_MAP_NOT_FOUND: $RoleMapPath" }
-
-$text = Get-Content -Raw -LiteralPath $RoleMapPath
-$projectMatch = [regex]::Match($text, '(?im)^\s*PROJECT_ID\s*:\s*(\S+)\s*$')
-if (-not $projectMatch.Success -or [string]::IsNullOrWhiteSpace($projectMatch.Groups[1].Value) -or $projectMatch.Groups[1].Value -match '^\{\{') {
+$roleMap = Read-RoleMap -Path $RoleMapPath
+if ([string]::IsNullOrWhiteSpace($roleMap.ProjectId) -or $roleMap.ProjectId -match '^\{\{') {
     throw 'PROJECT_ID_MISSING: role registry must contain a concrete PROJECT_ID'
 }
-$projectId = $projectMatch.Groups[1].Value
-$bootstrapStateMatch = [regex]::Match($text, '(?im)^\s*BOOTSTRAP_STATE\s*:\s*[\x60]?(ACTIVE|COMPLETE)[\x60]?\s*$')
-if (-not $bootstrapStateMatch.Success) { throw 'BOOTSTRAP_STATE_INVALID: expected ACTIVE or COMPLETE without changing the Core Architect role' }
-$bootstrapState = $bootstrapStateMatch.Groups[1].Value
-$outerMatch = [regex]::Match($text, '(?im)^\s*OUTER_TASK_ID\s*:\s*(\S+)\s*$')
-$outerTaskId = if ($outerMatch.Success) { $outerMatch.Groups[1].Value } else { '' }
-
-$rows = New-Object System.Collections.Generic.List[object]
-foreach ($line in ($text -split "`r?`n")) {
-    $row = [regex]::Match($line, '^\|\s*[\x60]?(CORE_ARCHITECT|MISSION_PLANNER|BUILD_EXECUTOR|EXTERNAL_ADVISOR)[\x60]?\s*\|\s*[\x60]?([^|]+?)[\x60]?\s*\|\s*[\x60]?([^|]+?)[\x60]?\s*\|\s*[\x60]?([^|]+?)[\x60]?\s*\|\s*[\x60]?([^|]+?)[\x60]?\s*\|\s*[\x60]?([^|]+?)[\x60]?\s*\|\s*[\x60]?([^|]+?)[\x60]?\s*\|\s*$')
-    if ($row.Success) {
-        $rows.Add([pscustomobject]@{
-            RoleId = $row.Groups[1].Value
-            DisplayName = $row.Groups[2].Value.Trim()
-            BindingMode = $row.Groups[3].Value.Trim()
-            CreationMode = $row.Groups[4].Value.Trim()
-            ThreadId = $row.Groups[5].Value.Trim()
-            TargetHandle = $row.Groups[6].Value.Trim()
-            BindingStatus = $row.Groups[7].Value.Trim()
-        })
-    }
-}
+$projectId = $roleMap.ProjectId
+if ($roleMap.BootstrapState -notin @('ACTIVE', 'COMPLETE')) { throw 'BOOTSTRAP_STATE_INVALID: expected ACTIVE or COMPLETE without changing the Core Architect role' }
+$bootstrapState = $roleMap.BootstrapState
+$outerTaskId = $roleMap.OuterTaskId
+$rows = @($roleMap.Rows)
 if ($rows.Count -eq 0) { throw 'ROLE_TABLE_MISSING: role registry has no lifecycle-aware role binding rows' }
 
 foreach ($requiredRole in @('CORE_ARCHITECT', 'MISSION_PLANNER', 'BUILD_EXECUTOR')) {

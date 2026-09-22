@@ -15,7 +15,8 @@ param(
     [string]$BuildExecutorDisplayName = '',
     [string]$BootstrapExecutionId = '',
     [string]$PlatformEvidencePath = '',
-    [string]$McpEvidencePath = ''
+    [string]$McpEvidencePath = '',
+    [string]$HumanAuthorizationPath = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -41,7 +42,7 @@ if ($formalInitialization) {
         throw 'FORMAL_INIT_REQUIRES_PROJECT_IDENTITY: provide ProjectName and ProjectShortName'
     }
 
-    $approvedSummary = Get-Content -Raw -LiteralPath $ApprovedSummaryPath
+    $approvedSummary = [IO.File]::ReadAllText((Resolve-Path -LiteralPath $ApprovedSummaryPath), [Text.Encoding]::UTF8)
     if ($approvedSummary -notmatch '(?im)^\s*Approval Status\s*:\s*APPROVED\s*$' -and $approvedSummary -notmatch '(?im)^\s*\u7528\u6237\u5ba1\u67e5\u4e0e\u6279\u51c6\u72b6\u6001\s*[:\uFF1A]\s*APPROVED\s*$') {
         throw 'APPROVAL_REQUIRED: the original startup summary must contain Approval Status: APPROVED after user review'
     }
@@ -57,6 +58,32 @@ if ($BootstrapOnly) {
     if ([string]::IsNullOrWhiteSpace($CoreArchitectDisplayName)) { $CoreArchitectDisplayName = "$ProjectShortName-Core-Architect" }
     if ([string]::IsNullOrWhiteSpace($MissionPlannerDisplayName)) { $MissionPlannerDisplayName = "$ProjectShortName-Mission-Planner" }
     if ([string]::IsNullOrWhiteSpace($BuildExecutorDisplayName)) { $BuildExecutorDisplayName = "$ProjectShortName-Build-Executor" }
+}
+
+# Preflight existing project identity and approved baseline before writing anything.
+if (($BootstrapOnly -or $formalInitialization) -and (Test-Path -LiteralPath $targetRoot)) {
+    $existingRoleMap = Join-Path $targetRoot 'ROLE-MAP.md'
+    if (Test-Path -LiteralPath $existingRoleMap -PathType Leaf) {
+        . (Join-Path $PSScriptRoot 'role-map-parser.ps1')
+        $registered = Read-RoleMap -Path $existingRoleMap
+        if (-not [string]::IsNullOrWhiteSpace($registered.ProjectId) -and $registered.ProjectId -ne $ProjectId) {
+            throw "PROJECT_IDENTITY_CONFLICT: existing PROJECT_ID=$($registered.ProjectId); requested PROJECT_ID=$ProjectId"
+        }
+    }
+}
+if ($formalInitialization) {
+    $existingSummary = Join-Path $targetRoot 'PROJECT-STARTUP-SUMMARY.md'
+    if (Test-Path -LiteralPath $existingSummary -PathType Leaf) {
+        $existingHash = (Get-FileHash -LiteralPath $existingSummary -Algorithm SHA256).Hash
+        $requestedHash = (Get-FileHash -LiteralPath $ApprovedSummaryPath -Algorithm SHA256).Hash
+        if ($existingHash -ne $requestedHash) {
+            throw "APPROVED_SUMMARY_CONFLICT: existing and requested approved summaries differ; explicit Human Governor migration is required"
+        }
+        $existingText = [IO.File]::ReadAllText((Resolve-Path -LiteralPath $existingSummary), [Text.Encoding]::UTF8)
+        if ($existingText -notmatch '(?im)^\s*Approval Status\s*:\s*APPROVED\s*$' -and $existingText -notmatch '(?im)^\s*用户审查与批准状态\s*[:：]\s*APPROVED\s*$') {
+            throw 'EXISTING_SUMMARY_NOT_APPROVED: an existing DRAFT cannot be treated as the approved baseline'
+        }
+    }
 }
 
 New-Item -ItemType Directory -Path $targetRoot -Force | Out-Null
@@ -113,7 +140,7 @@ if (-not (Test-Path -LiteralPath $startHere)) {
 6. Only after bootstrap passes may the External Advisor ChatGPT conversation be created for project planning.
 7. The approved startup summary must be returned to this original Core Architect conversation before formal project initialization.
 8. Confirm External Advisor MCP target and capability; a missing or wrong target is a capability gap, not a PASS.
-9. Run `check-startup-readiness.ps1` with preserved native platform and MCP records. In the current Skill build this check remains `MANUAL_REQUIRED` because no Codex-native evidence authenticator is available; do not publish the first Mission from hand-written status fields.
+9. Run `check-startup-readiness.ps1` with preserved native platform and MCP records. Without a Human Governor receipt it remains `MANUAL_REQUIRED`; a hash-bound `HUMAN_VERIFIED` receipt may authorize startup but never becomes platform attestation.
 
 Normal relay uses SEND -> YIELD -> WAKE -> ACT. Do not poll role threads.
 "@
@@ -221,6 +248,7 @@ if ($formalInitialization) {
             -ExecutionId $BootstrapExecutionId `
             -PlatformEvidencePath $PlatformEvidencePath `
             -McpEvidencePath $McpEvidencePath `
+            -HumanAuthorizationPath $HumanAuthorizationPath `
             -ApprovedSummaryPath (Join-Path $targetRoot 'PROJECT-STARTUP-SUMMARY.md') 2>&1 | Out-String
         if ($LASTEXITCODE -ne 0) {
             if ($readinessOutput -match 'PLATFORM_EVIDENCE_ORIGIN_UNVERIFIABLE|MANUAL_REQUIRED') {
@@ -240,8 +268,8 @@ if ($BootstrapOnly) {
     Write-Output 'Team-first bootstrap: BOOTSTRAP_STATE=ACTIVE; EXPECTED_NEW_CODEX_THREADS=2; no Mission, TASK or business-code operation was created'
 }
 if ($formalInitialization) {
-    Write-Output "Project records: APPROVED summary preserved; generated without overwriting existing files"
-    Write-Output "Startup readiness: $startupReadiness; no first Mission may be published until check-startup-readiness.ps1 passes"
+    Write-Output "Project records: APPROVED summary hash matched or was preserved; generated without overwriting existing files"
+    Write-Output "Startup readiness: $startupReadiness; no first Mission may be published until deterministic checks and a bound Human Governor authorization pass"
 }
 Write-Output "Created: $($created -join ', ')"
 if ($skipped.Count -gt 0) { Write-Output "Skipped existing: $($skipped -join ', ')" }
