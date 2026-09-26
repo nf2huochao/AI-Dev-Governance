@@ -19,6 +19,7 @@ $required = @(
     'DECISIONS.md',
     'ARCHITECTURE-NO-GO.md',
     'START-HERE.md',
+    'ROLE-MAP.md',
     'roles/external-advisor.md',
     'roles/core-architect.md',
     'roles/mission-planner.md',
@@ -29,6 +30,15 @@ foreach ($relative in $required) {
     $path = Join-Path $governanceRoot $relative
     if (-not (Test-Path -LiteralPath $path)) { throw "Missing governance file: $relative" }
     if ($relative -ne 'RELAY_EVENTS.jsonl' -and [string]::IsNullOrWhiteSpace((Get-Content -Raw -LiteralPath $path))) { throw "Empty governance file: $relative" }
+}
+
+. (Join-Path $PSScriptRoot 'role-map-parser.ps1')
+$registry = Read-RoleMap (Join-Path $governanceRoot 'ROLE-MAP.md')
+if (-not $registry.ProjectPath -or [IO.Path]::GetFullPath($registry.ProjectPath).TrimEnd('\','/') -ne $project.TrimEnd('\','/')) {
+    throw 'WORKSPACE_IDENTITY_CONFLICT: role registry does not belong to this workspace'
+}
+foreach ($role in @('CORE_ARCHITECT','MISSION_PLANNER','BUILD_EXECUTOR','EXTERNAL_ADVISOR')) {
+    if (@($registry.Rows | Where-Object RoleId -eq $role).Count -ne 1) { throw "ROLE_BINDING_MISSING: $role" }
 }
 
 $eventsPath = Join-Path $governanceRoot 'RELAY_EVENTS.jsonl'

@@ -28,6 +28,11 @@ $formal = -not [string]::IsNullOrWhiteSpace($ApprovedSummaryPath)
 if ($BootstrapOnly -and $formal) { throw 'BOOTSTRAP_ONLY_CANNOT_USE_APPROVED_SUMMARY' }
 $roleMapPath = Join-Path $targetRoot 'ROLE-MAP.md'
 $registered = $null
+if ((Test-Path -LiteralPath $targetRoot) -and -not (Test-Path -LiteralPath $roleMapPath -PathType Leaf)) {
+    if (@(Get-ChildItem -LiteralPath $targetRoot -Force).Count) {
+        throw 'ROLE_MAP_RECOVERY_REQUIRED: existing governance records have no role registry; restore its recorded identity before resuming'
+    }
+}
 if (Test-Path -LiteralPath $roleMapPath -PathType Leaf) {
     $registered = Read-RoleMap $roleMapPath
     if ($ProjectId -and $ProjectId -ne $registered.ProjectId) { throw 'PROJECT_IDENTITY_CONFLICT: resume the recorded project or request an explicit migration' }
@@ -35,6 +40,9 @@ if (Test-Path -LiteralPath $roleMapPath -PathType Leaf) {
         throw 'WORKSPACE_IDENTITY_CONFLICT: the registry belongs to another or unknown workspace; do not silently rebind'
     }
     $ProjectId = $registered.ProjectId
+    if (-not (Test-Path -LiteralPath (Join-Path $targetRoot 'RELAY_EVENTS.jsonl') -PathType Leaf)) {
+        throw 'RELAY_HISTORY_RECOVERY_REQUIRED: restore the missing event log; initialization must not replace history with an empty log'
+    }
     if ($registered.ProjectName) { $ProjectName = $registered.ProjectName }
     if ($registered.ProjectShortName) { $ProjectShortName = $registered.ProjectShortName }
 }
@@ -139,8 +147,12 @@ if ($formal -and $BootstrapExecutionId -and $PlatformEvidencePath -and $McpEvide
 }
 Write-Output "Initialized governance at $targetRoot"
 if (-not $formal) {
-    Write-Output 'BIND_CURRENT_CONTEXT_AS_CORE_ARCHITECT: CURRENT_CONTEXT / REUSE_CURRENT'
-    Write-Output 'Team-first bootstrap: BOOTSTRAP_STATE=ACTIVE; EXPECTED_NEW_CODEX_THREADS=2; no Mission, TASK or business-code operation was created'
+    if ($null -ne $registered) {
+        Write-Output "Governance resume: BOOTSTRAP_STATE=$($registered.BootstrapState); existing identity and history preserved; inspect recorded progress before continuing"
+    } else {
+        Write-Output 'BIND_CURRENT_CONTEXT_AS_CORE_ARCHITECT: CURRENT_CONTEXT / REUSE_CURRENT'
+        Write-Output 'Team-first bootstrap: BOOTSTRAP_STATE=ACTIVE; EXPECTED_NEW_CODEX_THREADS=2; no Mission, TASK or business-code operation was created'
+    }
 } else {
     Write-Output 'Project records: APPROVED summary preserved with matching project identity; this is not permission to start development'
     Write-Output "Startup readiness: $startupReadiness; actual platform review and user authorization remain outside this file checker"

@@ -21,6 +21,7 @@ description: Use when the user requests an AI Dev Governance team for a ChatGPT 
 首次启动和恢复时，先完整阅读 [Bootstrap 执行规程](references/BOOTSTRAP-RUNBOOK.md)。
 这是给 Codex 的操作规程，不要把内部命令、模板填空、线程 ID 或哈希工作交给普通用户。
 只读进度入口：scripts/get-onboarding-status.ps1；它不创建角色、不写文件、不放行 Mission。
+已有获批摘要就复用，记录为完成的项目先核对真实批准和当前任务后恢复；不把“继续”重新变成项目规划。治理身份或历史日志丢失时恢复原记录，不通过初始化生成替代身份或空日志。
 
 ## 用户交互
 
