@@ -35,7 +35,7 @@ Review 必须检查实际改动、Commit、测试结果、Counter Evidence、已
 - 没有未披露的阻断或高风险限制；
 - 当前 TASK 仍服务当前 Mission。
 
-PASS 后司策令必须继续派发下一 TASK，不得让接力在成功后断开。
+PASS 后有当前 Mission 内的真实剩余工作才派下一 TASK；目标满足则提交 MISSION_COMPLETE 给天枢核并 YIELD，等待 Gate / 新 Mission，不凑任务、不自动通过 Gate。
 
 ## 4. REWORK
 

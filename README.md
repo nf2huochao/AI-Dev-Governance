@@ -12,6 +12,10 @@
 >
 > 大白话说，就是让 **外部顾问（外参师）帮你从局外检查方向，核心架构师（天枢核）把握全局，任务规划师（司策令）拆任务并验收，代码程序员（执造者）专心写代码和测试**；四个角色各管一件事，避免一个 AI 同时规划、执行、检查自己又宣布成功，让开发更不容易跑偏、漏错和半途断掉。
 
+> **快速开始：** [安装](#installation) · [首次使用指南](docs/FIRST-USE-ONBOARDING.zh-CN.md) · [失败恢复](docs/FAILURE-RECOVERY.zh-CN.md)
+>
+> **先确认环境：** 当前安装脚本面向 Windows，需要 Git；三个 Codex 对话须支持真实通信与回唤，ChatGPT 外参师须有可用的只读工程连接。Plus 订阅或本地 MCP 配置不保证这些能力齐备，Skill 会在建团队前检查；不支持时停在明确阻断，不先让你完成全部初始化。
+>
 > **核心原则**
 >
 > **No AI supervises itself.**
@@ -24,7 +28,8 @@
 
 ## 版本与更新
 
-- [v0.1.2：进度恢复和团队启动体验改进](https://github.com/nf2huochao/AI-Dev-Governance/releases/tag/v0.1.2)（当前公开测试版）。
+- [v0.1.3：身份、故障接力、证据关联与首次使用改进](https://github.com/nf2huochao/AI-Dev-Governance/releases/tag/v0.1.3)（当前公开测试版）。
+- [v0.1.2：进度恢复和团队启动体验改进](https://github.com/nf2huochao/AI-Dev-Governance/releases/tag/v0.1.2)。
 - [v0.1.1：首次使用、安装和证据边界改进](https://github.com/nf2huochao/AI-Dev-Governance/releases/tag/v0.1.1)。
 - [v0.1.0：最初的公开测试版本](https://github.com/nf2huochao/AI-Dev-Governance/releases/tag/v0.1.0)（历史版本；与原 `v0.1.0-beta.1` 使用同一份代码）。
 
@@ -276,16 +281,18 @@ Mission → TASK Contract → ACK → WORKING → HANDOFF
 
 ---
 
+<a id="installation"></a>
+
 # 安装方式 / Installation
 
-> 当前公开测试版：`v0.1.2`。较早的 `v0.1.0`、`v0.1.1` 均不含本次恢复与启动体验改进。
+> 当前公开测试版：`v0.1.3`。旧版保留；重新安装不等于现有项目规则已迁移，请在任务边界让 Codex 只读比对版本与定制规则，获准后备份更新，不重建角色或改写历史。
 
 ## 让 Codex 帮你安装（推荐）
 
 把下面这句话完整复制给 Codex：
 
 ```text
-请从 https://github.com/nf2huochao/AI-Dev-Governance 的 v0.1.2 版本安装 AI Dev Governance Skill；先检查是否已有同名安装，有则先说明安全备份或更新方法，未经我确认不要覆盖。安装后请在新对话检查 Skill 是否被发现。
+请从 https://github.com/nf2huochao/AI-Dev-Governance 的 v0.1.3 版本安装 AI Dev Governance Skill；先检查是否已有同名安装，有则先说明安全备份或更新方法，未经我确认不要覆盖。安装后请在新对话检查 Skill 是否被发现；已有项目先只读检查规则版本，不重建团队、不改写历史。
 ```
 
 ## 使用 PowerShell 手动安装
@@ -294,7 +301,7 @@ Mission → TASK Contract → ACK → WORKING → HANDOFF
 
 ```powershell
 $src = Join-Path $env:TEMP ("ai-dev-governance-" + [guid]::NewGuid())
-git clone --depth 1 --branch v0.1.2 https://github.com/nf2huochao/AI-Dev-Governance.git $src
+git clone --depth 1 --branch v0.1.3 https://github.com/nf2huochao/AI-Dev-Governance.git $src
 if ($LASTEXITCODE -ne 0) { throw 'GitHub 下载失败，安装未执行' }
 powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $src "scripts\install-local-skill.ps1")
 ```

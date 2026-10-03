@@ -18,7 +18,10 @@ VERIFY_STARTUP 表示获批摘要已保存，应补查已有通信、MCP 与启�
 
 ## 2. 能力预检与唯一原始 Core
 
-在创建任何角色前，核查本次平台可用的创建、消息和可靠当前对话身份能力。
+在创建任何角色前，核查创建、消息、可靠当前对话身份，以及外参师端 MCP 连接入口。
+一次给出 AVAILABLE / NOT_AVAILABLE / UNKNOWN 与实际依据：安装环境、创建/发送/读取工具、外参师账号的实际连接入口与必要授权。
+NOT_AVAILABLE 时在建团队前说明阻断和一个恢复动作；UNKNOWN 不当作成功，由用户在实际客户端核查一次入口，不索要凭据、不重复批准普通发送。
+本地 Codex 的 MCP 配置不能证明 ChatGPT web 可读取项目；这里是可用性预检，后续实际连接与读取仍为启动条件。
 BIND_CURRENT_CONTEXT_AS_CORE_ARCHITECT：CORE_ARCHITECT_SOURCE = CURRENT ORIGINAL CONVERSATION。
 BINDING_MODE = CURRENT_CONTEXT；CREATION_MODE = REUSE_CURRENT；BOOTSTRAP_STATE = ACTIVE。
 EXPECTED_NEW_CODEX_THREADS = 2；Bootstrap 不是第五角色，不能创建第二个 Core Architect。
@@ -31,9 +34,12 @@ EXPECTED_NEW_CODEX_THREADS = 2；Bootstrap 不是第五角色，不能创建第�
 | create_thread | 就绪返回 threadId、hostId；设置中可能只有 clientThreadId，它不能传给要求 threadId 的工具 |
 | send_message_to_thread | 目标参数 threadId，可选 hostId；这是已验证契约下目标句柄与 threadId 相同的依据，而不是字符串猜测 |
 | read_thread | 读取指定 threadId 的实际内容；可一次性核实有疑问的记录，不作为等待循环 |
-| 当前调用者身份 | 当前工具集没有专用“返回调用者 threadId”的接口；不得从标题、最近时间、活跃状态或同一路径猜测 |
+| 当前调用者身份 | 优先可信宿主上下文；直接执行环境可提供 CODEX_THREAD_ID，须通过原生线程元数据对照，不从标题或格式推断 |
 
-当前身份如由宿主可信上下文提供，保存原始来源引用并核对路由。否则保持
+运行 scripts/get-current-context.ps1 -AsJson 只取得直接执行环境的候选 threadId；may_bind=false，环境变量不是认证。
+对候选只做一次 read_thread，核对 threadId、hostId、工作区与原始对话，再按 send_message_to_thread 的真实参数确认通信句柄。
+不使用嵌套 Codex 进程的继承身份冒充原对话；冲突则停止，不枚举所有聊天猜目标，不连续查询。原始来源保留在项目私有证据，不公开私人线程或聊天。
+当前身份由可信宿主上下文提供时，保存来源并核对路由。无法取得或核实则保持
 CURRENT_THREAD_ID_UNAVAILABLE / BINDING_BLOCKED / CAPABILITY GAP，解释缺口和可行的人工平台核实动作。
 不能要求用户猜线程号，也不能创建替代 Core 来绕过缺失回传地址。
 
@@ -50,6 +56,8 @@ hostId 属于平台路由元数据，随原始工具记录保存；多主机发�
     & <skill-root>/scripts/guard-role-creation.ps1 -RoleMapPath <workspace>/.ai-governance/ROLE-MAP.md -RoleId MISSION_PLANNER
 
 初始化只创建缺失骨架；自动生成 PROJECT_ID，恢复时复用已有身份、名称与原摘要。
+新项目在现有 ROLE-MAP 记录 POLICY_PACKAGE_VERSION、四角色规则哈希和 RELAY_SCHEMA_VERSION=2，不建立竞争注册表。
+恢复时用 check-policy-version.ps1 只读比较；LEGACY_UNTRACKED / METADATA_INCOMPLETE / VERSION_DIFFERENCE / LOCALLY_MODIFIED 时解释缺口或差异，在任务边界经批准备份和迁移，不覆盖定制规则、身份或历史。
 正式事件日志从空文件开始，示例 examples/RELAY_EVENTS.bootstrap.example.jsonl 绝不导入正式日志。
 guard 输出 ROLE_CREATION_ALLOWED 才允许原生创建；CORE_ARCHITECT_CREATION_FORBIDDEN 必须复用当前对话；
 ROLE_ALREADY_BOUND / REUSE_EXISTING_THREAD 必须复用对应线程。

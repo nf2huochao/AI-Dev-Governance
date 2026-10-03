@@ -12,6 +12,7 @@ try {
         if (Test-Path -LiteralPath $g -PathType Container) {
             $result.stage='REPAIR_RECORDS'; $result.next_action='治理记录不完整，请让 Codex 检查并恢复已有记录，不要重新创建团队。'
             $registry=Read-RoleMap $map
+            $result['policy'] = & (Join-Path $PSScriptRoot 'check-policy-version.ps1') -ProjectPath $project -AsJson | ConvertFrom-Json
             $result['recorded_bootstrap_state']=$registry.BootstrapState
             if (-not $registry.ProjectPath -or [IO.Path]::GetFullPath($registry.ProjectPath).TrimEnd('\','/') -ne $project) { throw 'WORKSPACE_IDENTITY_CONFLICT' }
             $core=@($registry.Rows | Where-Object RoleId -eq 'CORE_ARCHITECT')
@@ -67,6 +68,11 @@ try {
                                 $result['current_task']=$current.task_id
                                 $result['relay_status']=$current.status
                                 $result.next_action="项目已有接力记录：$($current.task_id) / $($current.status)。由对应角色读取任务、交接与真实对话证据，从当前步骤恢复；不重走初始化、不自动重发任务。"
+                                $finished=@($events | Where-Object { $_.event -eq 'MISSION_COMPLETE' -and $_.mission_id -eq $current.mission_id })
+                                if ($finished.Count) {
+                                    $result.stage='REVIEW_MISSION'
+                                    $result.next_action='已有 Mission 完成报告，请天枢核核对目标与 Gate 证据；不要为了继续而创建无价值 TASK。日志不能自行通过 Gate。'
+                                }
                             }
                         }
                         $result.structure='VALID'
@@ -82,7 +88,10 @@ try {
         $result.stage='REPAIR_RECORDS'; $result.next_action='请让 Codex 核查缺失资料、身份或工作区冲突，恢复并保留原记录，不要重新创建团队。'
     }
 }
-if ($AsJson) { $result | ConvertTo-Json -Depth 3 } else {
+if ($result.Contains('policy') -and $result.policy.status -ne 'MATCH') {
+    $result.next_action += ' 请在任务边界核对规则版本差异，保留已有角色与历史；不要直接覆盖。'
+}
+if ($AsJson) { $result | ConvertTo-Json -Depth 4 } else {
     Write-Output $result.next_action
     Write-Output "Stage: $($result.stage); local state only; may_start_mission=false"
     if ($result.diagnostic) { Write-Output "Diagnostic: $($result.diagnostic)" }

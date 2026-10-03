@@ -55,8 +55,12 @@ try {
     }
     $map = $map.Replace('BOOTSTRAP_STATE: `ACTIVE`','BOOTSTRAP_STATE: `COMPLETE`')
     Write-Utf8 $mapPath $map
+    Write-Utf8 (Join-Path $g 'task-fixture.md') "PROJECT_ID: resume-fixture`nTASK_ID: T-1`nSynthetic task artifact, not platform evidence.`n"
     $formal = foreach ($state in @('DISPATCH','ACK','WORKING','HANDOFF')) {
-        @{event=$state;status=$state;project_id='resume-fixture';mission_id='M-1';task_id='T-1';execution_id='E-1';actor=$(if($state -eq 'DISPATCH'){'mission-planner'}else{'build-executor'})} | ConvertTo-Json -Compress
+        $e=[ordered]@{schema_version=2;event=$state;status=$state;project_id='resume-fixture';mission_id='M-1';task_id='T-1';execution_id='E-1';actor=$(if($state -eq 'DISPATCH'){'mission-planner'}else{'build-executor'});thread_id=$(if($state -eq 'DISPATCH'){'thread-planner-example'}else{'thread-executor-example'});evidence_ref='.ai-governance/task-fixture.md'}
+        if($state -eq 'DISPATCH'){$e.contract_ref='.ai-governance/task-fixture.md';$e.target_thread_id='thread-executor-example';$e.target_handle='thread-executor-example'}
+        if($state -eq 'HANDOFF'){$e.handoff_ref='.ai-governance/task-fixture.md';$e.target_thread_id='thread-planner-example';$e.target_handle='thread-planner-example'}
+        $e | ConvertTo-Json -Compress
     }
     Write-Utf8 $eventsPath ($events.TrimEnd() + "`n" + ($formal -join "`n") + "`n")
     Case 'completed startup shows current handoff without restarting bootstrap' {

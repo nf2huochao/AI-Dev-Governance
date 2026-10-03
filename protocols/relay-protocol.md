@@ -62,6 +62,7 @@ REVIEW → ESCALATE
 | From | To | Actor | Required evidence |
 |---|---|---|---|
 | DISPATCH | ACK | Build Executor | 已读取 TASK Contract，确认边界 |
+| DISPATCH | BLOCKED | Mission Planner / Build Executor | ACK 前真实阻断，error_ref 指向实际错误，不补 ACK |
 | ACK | WORKING | Build Executor | 开始执行，未改变任务契约 |
 | WORKING | HANDOFF | Build Executor | 改动、测试、Commit、Evidence |
 | WORKING | BLOCKED | Build Executor | 明确阻断条件和已尝试内容 |
@@ -143,10 +144,22 @@ Next Expected Action:
 
 1. 记录 Review Evidence；
 2. 关闭当前 TASK；
-3. 创建属于当前 Mission 的下一 TASK；
-4. 发送新的 DISPATCH。
+3. 当前 Mission 仍有批准范围内的有价值工作时，创建下一 TASK 并发送 DISPATCH；
+4. Mission 目标满足则向天枢核发送 MISSION_COMPLETE 和证据，然后 YIELD；不凑 TASK，完成报告不等于 Gate PASS。
 
 PASS 不允许成为无限扩大当前任务的理由。
+
+发送完全失败时保留错误，不记录成功 DISPATCH；已记录 DISPATCH 但 ACK 前受阻可 DISPATCH → BLOCKED，error_ref 必须可定位。一次定向恢复失败后让出执行权，不轮询、不补 ACK。
+
+### V0.1.3 正式事件与证据关联
+
+新项目 formal event 使用 schema_version=2，保留原有字段，增加真实发送者 thread_id、项目内相对路径 evidence_ref。DISPATCH 增加 contract_ref、target_thread_id、target_handle；HANDOFF 增加 handoff_ref 和司策令目标；REVIEW/PASS/REWORK 增加 review_ref。Contract/Handoff/Review 文件包含匹配的 PROJECT_ID 与 TASK_ID，以及既有目标、测试、Commit 或可验证 Evidence。可选 commit_id 必须能在真实仓库解析。
+
+路径必须在工作区内且不能经链接逃逸；证据存在和上下文匹配不证明真实平台事件。原始收发、执行与独立 Review 由可访问原始记录的流程核验。
+
+旧日志不改写，报告 LEGACY_EVIDENCE_GAP；在新任务边界开始 schema 2 后不能降级，旧角色表不因重新安装自动升级。declared_tasks 数 PASS 标签，evidence_linked_tasks 数本地关联完整的任务；completed_tasks=0 表示本脚本不认证完成数，不是否定原任务。真实完成数须独立证据审核。
+
+MISSION_COMPLETE 是 Planner 控制报告，须在当前 TASK REVIEW/PASS 后发生，包含 role_id、thread_id、project_id、mission_id、execution_id、evidence、evidence_ref；它不能自动通过 Gate，也不能继续给已完成 Mission 派新任务。
 
 发送新的 DISPATCH 成功后，Mission Planner 必须立即 `YIELD`。下一次执行只能由 Build Executor 的真实 ACK、HANDOFF、BLOCKED 或通信错误事件唤醒。
 

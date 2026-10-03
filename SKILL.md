@@ -58,7 +58,7 @@ EXPECTED_NEW_CODEX_THREADS = 2；只有原始初始化创建两个角色，恢�
 ## 接力和证据边界
 
 司策令 DISPATCH → 执造者 ACK → WORKING → HANDOFF → 司策令 REVIEW → PASS / REWORK / BLOCKED / ESCALATE。
-PASS 后派发下一 TASK；已完成任务不能为刷数量重复派发。
+PASS 后有当前 Mission 内的真实剩余工作才派下一 TASK；Mission 完成则上报天枢核并 YIELD。已完成任务不能为刷数量重复派发。
 
 SEND → YIELD → WAKE → ACT。No polling. Work on events.
 成功派发/HANDOFF 后让出执行权；执造者 ACK 后继续自身工作。禁止空转轮询、sleep 等待和无限重试。
@@ -66,6 +66,7 @@ Watchdog 每次真实调度只检查一次；正常静默结束本轮，异常�
 发送成功不等于接收、执行或唤醒。无真实回唤能力时记录 BLOCKED / CAPABILITY GAP。
 
 正式 RELAY_EVENTS.jsonl 从空日志开始；只追加已发生事件，保留历史。
+新项目用 schema 2 关联线程、通信目标与任务交付文件；旧日志保留并标注缺口。declared_tasks / evidence_linked_tasks 不等于真实完成数。
 脚本仅做确定性结构检查。人工填写 VERIFIED、HUMAN_VERIFIED、哈希相符或退出码 0，都不能认证平台通信或授权。
 check-startup-readiness.ps1 的 JSON 输出 may_start_mission=false；当前平台认证能力缺口为 MANUAL_REQUIRED。
 最终放行由实际能查看原始平台证据的启动流程核验，并定位用户真实批准；不能由文件自证。
