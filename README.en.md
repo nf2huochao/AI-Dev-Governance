@@ -8,6 +8,10 @@
 >
 > In plain language: **the External Advisor checks direction from outside the delivery chain, the Core Architect keeps the whole project on course, the Mission Planner breaks work down and reviews it, and the Build Executor focuses on coding and testing**. Each role owns one responsibility, preventing a single AI from planning, implementing, reviewing itself, and declaring success. The result is development that is less likely to drift, miss defects, or break down halfway through.
 
+> **Quick start:** [Install](#installation) · [First use](docs/FIRST-USE-ONBOARDING.zh-CN.md) · [Recovery](docs/FAILURE-RECOVERY.zh-CN.md) (the detailed guides are currently in Chinese).
+>
+> **Check prerequisites first:** The installer targets Windows and requires Git. Codex must support real cross-chat messaging and wakeups, and the ChatGPT External Advisor needs a working read-only project connection. A Plus subscription or local MCP configuration alone does not establish availability. Check these before creating the team; stop with a clear blocker when unavailable.
+>
 > **Core Principle**
 >
 > **No AI supervises itself.**
@@ -20,7 +24,8 @@
 
 ## Versions and updates
 
-- [v0.1.2: project recovery and team-startup improvements](https://github.com/nf2huochao/AI-Dev-Governance/releases/tag/v0.1.2) (current public beta).
+- [v0.1.3: identity, relay-failure handling, evidence links and onboarding](https://github.com/nf2huochao/AI-Dev-Governance/releases/tag/v0.1.3) (current public beta).
+- [v0.1.2: project recovery and team-startup improvements](https://github.com/nf2huochao/AI-Dev-Governance/releases/tag/v0.1.2).
 - [v0.1.1: onboarding, installation, and evidence-boundary improvements](https://github.com/nf2huochao/AI-Dev-Governance/releases/tag/v0.1.1).
 - [v0.1.0: initial public beta](https://github.com/nf2huochao/AI-Dev-Governance/releases/tag/v0.1.0) (historical snapshot of the same code as `v0.1.0-beta.1`).
 
@@ -274,14 +279,14 @@ Through an authorized MCP connection, the External Advisor can read real enginee
 
 # Installation
 
-> Current public beta: `v0.1.2`. Earlier releases do not include the recovery and team-startup improvements in this version.
+> Current public beta: `v0.1.3`. Reinstallation does not migrate an existing project's rules. Ask Codex to compare policy versions and customizations read-only at a task boundary, then back up and migrate only with approval. Preserve role bindings and history.
 
 ## Ask Codex to install it for you (recommended)
 
 Copy the complete sentence below into Codex:
 
 ```text
-Install AI Dev Governance Skill version v0.1.2 from https://github.com/nf2huochao/AI-Dev-Governance. Check for an existing Skill with the same name first; explain a safe backup or update path and do not overwrite it without my confirmation. Then check Skill discovery in a new Codex task.
+Install AI Dev Governance Skill version v0.1.3 from https://github.com/nf2huochao/AI-Dev-Governance. Check for an existing Skill with the same name first; explain a safe backup or update path and do not overwrite it without my confirmation. Then check discovery in a new Codex task. For existing projects, compare policy versions read-only; do not recreate the team or rewrite history.
 ```
 
 ## Manual installation with PowerShell
@@ -290,7 +295,7 @@ Run the following in Windows PowerShell:
 
 ```powershell
 $src = Join-Path $env:TEMP ("ai-dev-governance-" + [guid]::NewGuid())
-git clone --depth 1 --branch v0.1.2 https://github.com/nf2huochao/AI-Dev-Governance.git $src
+git clone --depth 1 --branch v0.1.3 https://github.com/nf2huochao/AI-Dev-Governance.git $src
 if ($LASTEXITCODE -ne 0) { throw 'GitHub download failed; installation was not run' }
 powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $src "scripts\install-local-skill.ps1")
 ```

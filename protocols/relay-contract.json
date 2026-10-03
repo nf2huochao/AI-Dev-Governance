@@ -1,8 +1,8 @@
 {
   "required_fields": ["event", "project_id", "mission_id", "task_id", "execution_id", "actor", "status"],
-  "control_events": ["ROLE_THREAD_CREATED", "BOOTSTRAP_HELLO", "BOOTSTRAP_ACK", "RECOVERY_HELLO", "RECOVERY_ACK", "ROLE_THREAD_REBOUND"],
+  "control_events": ["ROLE_THREAD_CREATED", "BOOTSTRAP_HELLO", "BOOTSTRAP_ACK", "RECOVERY_HELLO", "RECOVERY_ACK", "ROLE_THREAD_REBOUND", "MISSION_COMPLETE"],
   "transitions": {
-    "DISPATCH": ["ACK"], "ACK": ["WORKING", "BLOCKED"], "WORKING": ["HANDOFF", "BLOCKED"],
+    "DISPATCH": ["ACK", "BLOCKED"], "ACK": ["WORKING", "BLOCKED"], "WORKING": ["HANDOFF", "BLOCKED"],
     "HANDOFF": ["REVIEW", "BLOCKED"], "REVIEW": ["PASS", "REWORK", "BLOCKED", "ESCALATE"],
     "PASS": ["DISPATCH"], "REWORK": ["WORKING"], "BLOCKED": ["ESCALATE"], "ESCALATE": ["DISPATCH"]
   },

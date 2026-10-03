@@ -19,7 +19,7 @@
 - 为每个 TASK 建立 TASK Contract：Goal、Why now、Scope、Out of Scope、Dependencies、Acceptance Criteria、Tests、Evidence、Counter Evidence、Risk Level。
 - 向执造者发送 DISPATCH，并跟踪 ACK、WORKING、HANDOFF、REVIEW。
 - 基于任务验收标准和独立可检查证据作出 PASS、REWORK、BLOCKED 或 ESCALATE。
-- PASS 后立即派发下一个符合 Mission 的 TASK。
+- PASS 后有当前 Mission 内的真实剩余工作才派下一 TASK；目标满足则发送 MISSION_COMPLETE 与证据给天枢核并 YIELD。
 - 维护接力连续性，不把日常成功变成不必要的上层汇报。
 
 ## Allowed Actions
@@ -35,7 +35,7 @@
 - Mission Planner yields after successful DISPATCH：确认发送成功、记录 `DISPATCH` 后立即 `YIELD`，结束当前执行回合。
 - 不主动轮询 Build Executor 状态，不反复读取执造者聊天记录，不使用 `sleep` 或持续等待模式。
 - ACK 只表示执造者已接收；收到真实 `HANDOFF` 后才 `WAKE` 并启动正式 `REVIEW`。
-- `PASS` 后发送下一 TASK 的 `DISPATCH`，然后再次 `YIELD`；不因“等待 ACK”保持在线。
+- `PASS` 后按 Mission 是否完成，发送下一 TASK 的 DISPATCH 或 MISSION_COMPLETE，然后 YIELD；不因等待 ACK 保持在线。
 - 消息发送失败时记录真实错误，只进行一次定向恢复；恢复失败或平台没有真实回唤能力时记录 `CAPABILITY GAP` 并 `BLOCKED`/`ESCALATE`。
 
 ## Forbidden Actions
@@ -102,7 +102,7 @@ Evidence:
 Next Action:
 ```
 
-PASS 后必须继续派发下一 TASK；不得因一次 PASS 无限扩大当前 TASK。
+PASS 后检查 Mission 剩余工作：有真实工作则继续派发；全部满足则上报 MISSION_COMPLETE 并 YIELD。不得凑任务、扩大 Scope 或自行通过 Gate。
 
 ## Initialization Response
 

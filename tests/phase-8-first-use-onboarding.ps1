@@ -131,8 +131,12 @@ Undecided Items: Real platform communication requires manual verification.
         '{"event":"REVIEW","project_id":"fut","mission_id":"M1","task_id":"TASK-ONBOARD-001","execution_id":"E1","actor":"mission-planner","status":"REVIEW"}',
         '{"event":"PASS","project_id":"fut","mission_id":"M1","task_id":"TASK-ONBOARD-001","execution_id":"E1","actor":"mission-planner","status":"PASS"}'
     )
-    $events | Set-Content -LiteralPath (Join-Path $governance 'RELAY_EVENTS.jsonl') -Encoding ascii
-    $relayOutput = & $relayCheck -ProjectPath $workspace | Out-String
+    # Legacy compatibility is not tested against a new project's unbound registry.
+    $legacyWorkspace = Join-Path $artifactRoot 'legacy-relay'
+    $legacyGovernance = Join-Path $legacyWorkspace '.ai-governance'
+    New-Item -ItemType Directory -Path $legacyGovernance -Force | Out-Null
+    $events | Set-Content -LiteralPath (Join-Path $legacyGovernance 'RELAY_EVENTS.jsonl') -Encoding ascii
+    $relayOutput = & $relayCheck -ProjectPath $legacyWorkspace | Out-String
     Assert-True ($relayOutput -match 'Relay validation: PASS') 'I: relay validation failed for the onboarding fixture'
     Assert-True ($onboarding -match '普通接力不用你复制消息') 'I: onboarding docs do not explain routine relay does not need manual copying'
     Write-Output 'I relay continuation structure: PASS (not real multi-chat proof)'

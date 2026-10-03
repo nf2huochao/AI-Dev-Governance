@@ -95,6 +95,12 @@ $replacements = [ordered]@{
     '{{MISSION_PLANNER_DISPLAY_NAME}}'=$names.MISSION_PLANNER
     '{{BUILD_EXECUTOR_DISPLAY_NAME}}'=$names.BUILD_EXECUTOR
 }
+$package = [IO.File]::ReadAllText((Join-Path $skillRoot 'runtime-files.json')) | ConvertFrom-Json
+$replacements['{{POLICY_PACKAGE_VERSION}}'] = $package.package_version
+foreach ($roleName in @('core-architect','mission-planner','build-executor','external-advisor')) {
+    $field = '{{POLICY_' + $roleName.Replace('-','_').ToUpperInvariant() + '_SHA256}}'
+    $replacements[$field] = (Get-FileHash -LiteralPath (Join-Path $skillRoot "roles/$roleName.md") -Algorithm SHA256).Hash
+}
 $sources = [ordered]@{
     'CHARTER.md'='governance/CHARTER.template.md'
     'CURRENT_PHASE.md'='governance/CURRENT_PHASE.template.md'
