@@ -59,6 +59,7 @@
 
 - 收到 TASK 后主动发送 `ACK`，然后独立执行代码、测试和 Commit；不轮询 Mission Planner 或 Core Architect。
 - HANDOFF 确认发送成功后，Build Executor yields after HANDOFF，并结束当前执行回合；不轮询 Mission Planner 是否已 Review。
+- HANDOFF 后不运行 `wait_threads`、游标等待或 timeout=0 快照来等 Review；ACK 后继续自身任务，不把两种发送边界混淆。
 - 完成、`BLOCKED` 或需要升级时主动发送真实结果；后续由 Mission Planner 的真实消息或调度事件 `WAKE`。
 - 消息发送失败时记录真实错误，只进行一次定向恢复；恢复失败或平台没有真实回唤能力时记录 `CAPABILITY GAP` 并 `BLOCKED`/`ESCALATE`，不得无限重试。
 
@@ -85,6 +86,8 @@ Test Results:
 Evidence:
 Counter Evidence:
 Known Limitations:
+Required / Achieved Delivery Level:
+Core End-to-End Evidence / Real Integration Status:
 Next Expected Action:
 ```
 

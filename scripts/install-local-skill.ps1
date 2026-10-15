@@ -1,29 +1,43 @@
 [CmdletBinding()]
-param([string]$SourcePath = '', [string]$TargetPath = '', [string[]]$DiscoveryRoots = @())
+param([string]$SourcePath = '', [string]$TargetPath = '', [string[]]$DiscoveryRoots = @(), [switch]$InspectOnly)
 $ErrorActionPreference = 'Stop'
 if (-not $SourcePath) { $SourcePath = Join-Path $PSScriptRoot '..' }
 $SourcePath = (Resolve-Path -LiteralPath $SourcePath).Path
 if (-not $TargetPath) { $TargetPath = Join-Path $env:USERPROFILE '.agents\skills\ai-dev-governance' }
 $TargetPath = [IO.Path]::GetFullPath($TargetPath)
-if (Test-Path -LiteralPath $TargetPath) { throw "Target already exists; no files were overwritten: $TargetPath" }
+if (-not $InspectOnly -and (Test-Path -LiteralPath $TargetPath)) { throw "Target already exists; no files were overwritten: $TargetPath" }
 if ($DiscoveryRoots.Count -eq 0) {
     $DiscoveryRoots = @((Join-Path $env:USERPROFILE '.agents\skills'), (Join-Path $env:USERPROFILE '.codex\skills'))
     if ($env:CODEX_HOME) { $DiscoveryRoots += Join-Path $env:CODEX_HOME 'skills' }
 }
 $targetParent = Split-Path -Parent $TargetPath
 $duplicates = New-Object 'System.Collections.Generic.List[string]'
+$installations = @()
 foreach ($root in @($DiscoveryRoots + @($targetParent) | Select-Object -Unique)) {
     if (-not (Test-Path -LiteralPath $root -PathType Container)) { continue }
     foreach ($entry in Get-ChildItem -LiteralPath $root -Directory) {
         # A checkout used as the installation source is not a competing installation.
-        if ($entry.FullName -eq $SourcePath) { continue }
+        if (-not $InspectOnly -and $entry.FullName -eq $SourcePath) { continue }
         $manifestPath = Join-Path $entry.FullName 'SKILL.md'
         if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { continue }
         $text = [IO.File]::ReadAllText($manifestPath, [Text.Encoding]::UTF8)
         if ($text -match '(?s)\A---\r?\n(.*?)\r?\n---(?:\r?\n|$)') {
-            if ($Matches[1] -match '(?im)^name:\s*[''"]?ai-dev-governance[''"]?\s*(?:#.*)?$') { $duplicates.Add($entry.FullName) }
+            if ($Matches[1] -match '(?im)^name:\s*[''"]?ai-dev-governance[''"]?\s*(?:#.*)?$') {
+                $duplicates.Add($entry.FullName)
+                if ($InspectOnly) {
+                    $version='UNKNOWN';$versionPath=Join-Path $entry.FullName 'runtime-files.json'
+                    if(Test-Path -LiteralPath $versionPath -PathType Leaf){
+                        try{$version=([IO.File]::ReadAllText($versionPath,[Text.Encoding]::UTF8)|ConvertFrom-Json).package_version}catch{$version='INVALID_MANIFEST'}
+                    }
+                    $installations+=@{path=$entry.FullName;package_version=$version;entry_sha256=(Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash}
+                }
+            }
         }
     }
+}
+if($InspectOnly){
+    [ordered]@{installations=@($installations);conflict=($installations.Count -gt 1);read_only=$true;action='Report sources and versions; back up outside discovery roots only after explicit approval. No installation or migration performed.'}|ConvertTo-Json -Depth 4
+    return
 }
 if ($duplicates.Count) { throw "DUPLICATE_SKILL_NAME: $($duplicates -join '; '). Back up the existing installation outside all Skill discovery folders before an explicit update; nothing was overwritten." }
 $package = [IO.File]::ReadAllText((Join-Path $SourcePath 'runtime-files.json'), [Text.Encoding]::UTF8) | ConvertFrom-Json

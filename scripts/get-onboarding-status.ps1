@@ -12,6 +12,11 @@ try {
         if (Test-Path -LiteralPath $g -PathType Container) {
             $result.stage='REPAIR_RECORDS'; $result.next_action='治理记录不完整，请让 Codex 检查并恢复已有记录，不要重新创建团队。'
             $registry=Read-RoleMap $map
+            $mapText=[IO.File]::ReadAllText($map,[Text.Encoding]::UTF8)
+            $override=Get-RoleMapField $mapText 'PROJECT_OVERRIDE'
+            $transport=Get-RoleMapField $mapText 'EXTERNAL_REVIEW_TRANSPORT'
+            $result['recorded_project_override']=$override
+            $result['recorded_review_transport']=$transport
             $result['policy'] = & (Join-Path $PSScriptRoot 'check-policy-version.ps1') -ProjectPath $project -AsJson | ConvertFrom-Json
             $result['recorded_bootstrap_state']=$registry.BootstrapState
             if (-not $registry.ProjectPath -or [IO.Path]::GetFullPath($registry.ProjectPath).TrimEnd('\','/') -ne $project) { throw 'WORKSPACE_IDENTITY_CONFLICT' }
@@ -49,16 +54,16 @@ try {
                                 $result.next_action='已保存标为获批的摘要。由 Codex 定位已有真实批准、通信及 MCP 证据，补齐缺项；不要重新要求规划或复制同一摘要。'
                             }
                         }
-                        if ($registry.BootstrapState -eq 'COMPLETE') {
+                        $contract=[IO.File]::ReadAllText((Join-Path $PSScriptRoot '../protocols/relay-contract.json')) | ConvertFrom-Json
+                        $formal=@($events | Where-Object { $_.event -notin $contract.control_events })
+                        $recordedException=($transport -eq 'MANUAL_COPY' -and -not [string]::IsNullOrWhiteSpace($override))
+                        if ($registry.BootstrapState -eq 'COMPLETE' -or ($approved -and ($formal.Count -gt 0 -or $recordedException))) {
                             $result.stage='REPAIR_RECORDS'
                             if (-not $approved) { throw 'COMPLETED_STARTUP_SUMMARY_MISSING_OR_UNAPPROVED' }
                             foreach ($file in @('PROJECT-INDEX.md','DEVELOPMENT-RULES.md','CURRENT_MISSION.md','RELAY_STATE.md')) {
                                 $path=Join-Path $g $file
                                 if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or [string]::IsNullOrWhiteSpace([IO.File]::ReadAllText($path))) { throw "COMPLETED_STARTUP_RECORD_MISSING: $file" }
                             }
-                            $null=& (Join-Path $PSScriptRoot 'check-relay.ps1') -ProjectPath $project
-                            $contract=[IO.File]::ReadAllText((Join-Path $PSScriptRoot '../protocols/relay-contract.json')) | ConvertFrom-Json
-                            $formal=@($events | Where-Object { $_.event -notin $contract.control_events })
                             $result.stage='RESUME_PROJECT'
                             $result.next_action='项目记录显示初始化已完成。核对已有真实授权与当前 Mission 后继续，不重建团队或重复规划；本地 COMPLETE 不证明平台核验通过。'
                             if ($formal.Count) {
@@ -67,15 +72,36 @@ try {
                                 $result['current_mission']=$current.mission_id
                                 $result['current_task']=$current.task_id
                                 $result['relay_status']=$current.status
+                                $result['context_authentication']='UNVERIFIED_LOCAL_RECORDS'
                                 $result.next_action="项目已有接力记录：$($current.task_id) / $($current.status)。由对应角色读取任务、交接与真实对话证据，从当前步骤恢复；不重走初始化、不自动重发任务。"
                                 $finished=@($events | Where-Object { $_.event -eq 'MISSION_COMPLETE' -and $_.mission_id -eq $current.mission_id })
                                 if ($finished.Count) {
                                     $result.stage='REVIEW_MISSION'
+                                    $result['next_owner']='CORE_ARCHITECT'
                                     $result.next_action='已有 Mission 完成报告，请天枢核核对目标与 Gate 证据；不要为了继续而创建无价值 TASK。日志不能自行通过 Gate。'
                                 }
                             }
+                            if($registry.BootstrapState -ne 'COMPLETE'){
+                                $result.stage='RECONCILE_ACTIVE_PROJECT'
+                                $result['next_owner']='CORE_ARCHITECT'
+                                $result.next_action='已有开发接力但启动记录仍为 ACTIVE。核对当前任务与已有真实批准，修复状态不一致；不要重建团队、重新规划或自动重发任务。'
+                            }
+                            if($recordedException){
+                                $result.stage='REVIEW_PROJECT_EXCEPTION'
+                                $result['next_owner']='CORE_ARCHITECT'
+                                $result['mcp_verification']='NOT_ESTABLISHED_BY_MANUAL_REVIEW'
+                                $result.next_action='已有人工外审替代记录和开发上下文。由天枢核定位原始人类批准、适用范围及外参师材料，再决定如何接续当前任务；不重走初始化、不把人工外审当 MCP 通过，文件不能自行授权。'
+                            }
+                            try{
+                                $null=& (Join-Path $PSScriptRoot 'check-relay.ps1') -ProjectPath $project
+                            }catch{
+                                $result.stage='REPAIR_RELAY';$result.structure='INVALID'
+                                $result['next_owner']='MISSION_PLANNER'
+                                $result.diagnostic=$_.Exception.Message
+                                $result.next_action='现有接力日志未通过结构检查。保留当前任务、原始历史和真实执行证据，由司策令定位首个错误并提出显式修复方案；不要删日志、补造历史、重建团队或把问题改成重新初始化。'
+                            }
                         }
-                        $result.structure='VALID'
+                        if($result.structure -ne 'INVALID'){$result.structure='VALID'}
                     }
                 }
             }

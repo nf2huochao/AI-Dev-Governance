@@ -31,6 +31,7 @@ description: Use when the user requests an AI Dev Governance team for a ChatGPT 
 用户负责工作区、名称、批准摘要、平台授权及高风险决定。保留真实平台权限提示，不绕过权限。
 需要用户转去 ChatGPT 时，直接提供带项目上下文的可复制规划提示；用户只复制一次已批准摘要回来。
 普通 TASK/ACK/HANDOFF 不要求用户手工搬运；能力不足就明确暂停自动接力，不假装完成。
+团队内通信应有可核对的原始人类批准，覆盖已绑定角色的派发、ACK、交接和风险报告；已批准的不重复索取，平台额外权限仍照常确认。
 
 ## Team-first 顺序
 
@@ -62,15 +63,18 @@ PASS 后有当前 Mission 内的真实剩余工作才派下一 TASK；Mission �
 
 SEND → YIELD → WAKE → ACT。No polling. Work on events.
 成功派发/HANDOFF 后让出执行权；执造者 ACK 后继续自身工作。禁止空转轮询、sleep 等待和无限重试。
+边界发送后只保存真实返回并结束本轮；`wait_threads`、带游标等待和 timeout=0 查询都不能替代 YIELD。按需由后续独立审查运行 scripts/check-relay-behavior.ps1 检查原生调用序列，不在发送后查询自己或对方来“验让出”。
 Watchdog 每次真实调度只检查一次；正常静默结束本轮，异常只做一次定向恢复。
 发送成功不等于接收、执行或唤醒。无真实回唤能力时记录 BLOCKED / CAPABILITY GAP。
 
 正式 RELAY_EVENTS.jsonl 从空日志开始；只追加已发生事件，保留历史。
+正式状态由司策令依据真实证据按因果顺序归档，使用 scripts/add-relay-event.ps1 先校验再追加；Bootstrap 控制事件由原始天枢核记录。禁止手工 Add-Content、状态别名或覆盖历史绕过校验；本地 event_id 不是平台消息 ID。
 新项目用 schema 2 关联线程、通信目标与任务交付文件；旧日志保留并标注缺口。declared_tasks / evidence_linked_tasks 不等于真实完成数。
 脚本仅做确定性结构检查。人工填写 VERIFIED、HUMAN_VERIFIED、哈希相符或退出码 0，都不能认证平台通信或授权。
 check-startup-readiness.ps1 的 JSON 输出 may_start_mission=false；当前平台认证能力缺口为 MANUAL_REQUIRED。
 最终放行由实际能查看原始平台证据的启动流程核验，并定位用户真实批准；不能由文件自证。
 不要求用户填写授权 JSON，已有真实批准应复用，不重复索取相同批准。
+已有开发或人工外审替代记录时先审查原始批准与当前任务，不退回初始化；记录不等于授权，人工材料也不等于 MCP 通过。验收按 protocols/review-protocol.md 分开实现、隔离测试、真实接通和用户验收，先证明核心完整流程，不以局部 PASS 累积替代产品可用。
 
 用户项目需求基线为 .ai-governance/PROJECT-STARTUP-SUMMARY.md；SPEC-V0.1.md 只是 Skill 产品基线。
 用户说明见 [首次使用指南](docs/FIRST-USE-ONBOARDING.zh-CN.md)，故障见 [恢复指南](docs/FAILURE-RECOVERY.zh-CN.md)。

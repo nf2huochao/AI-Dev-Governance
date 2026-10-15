@@ -30,6 +30,8 @@
     "roles/external-advisor.md",
     "roles/mission-planner.md",
     "scripts/check-bootstrap.ps1",
+    "scripts/add-relay-event.ps1",
+    "scripts/check-relay-behavior.ps1",
     "scripts/check-mcp-target.ps1",
     "scripts/check-relay.ps1",
     "scripts/check-role-bindings.ps1",

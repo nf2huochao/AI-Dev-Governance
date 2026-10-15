@@ -26,10 +26,16 @@ Watchdog 遵循 **No polling. Work on events.** 它只在真实的 20 分钟触�
 12. 是否 PASS 后继续无边界扩张？
 13. 是否已经 BLOCKED 但仍不断盲试？
 14. 当前仓库是否可解释、可恢复？
+15. 当前动作真正归谁：Executor 工作、Planner Review，还是 Core 自己审 Gate/发布获批后继 Mission？
+16. 局部 PASS 是否仍缺用户目标所需的真实接通/完整流程证据？
 
 正常时：保持静默，继续开发。
 
 正常巡检只执行一轮轻量检查，记录 `WATCHDOG: CLEAR` 后立即结束本轮；不得使用 `sleep`、循环读取线程状态或持续等待恢复结果。
+
+没有越权不等于推进正常。收到 MISSION_COMPLETE 但 Core 尚未审 Gate 时，明确 CORE_REVIEW_DUE；Gate 已真实通过、仍有获批工作且没有后继 Mission 时，明确 MISSION_DISPATCH_DUE。这些是 Core 自身待办，不记成 WAITING_HUMAN 或仅 CLEAR。本轮只处理一项范围内治理动作，或给出具体证据缺口、责任人和下一合法触发；不能代 Planner 验业务、跳过独立证据或未经批准推进阶段。
+
+真正的 WAITING_HUMAN 应有已向用户提出的具体问题和受影响范围；某条真实连接/人工点验受阻，不暂停无依赖的获批开发。已批准的人类替代审查决定要按真实来源核实，不能在恢复时忽略，也不能把它标成 MCP 通过。巡检证据记录 Next Action Owner / Next Action / Trigger，避免下一轮重读全部历史或重复发同一恢复消息。
 
 ## 3. Evidence required
 

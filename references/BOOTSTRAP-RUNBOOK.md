@@ -9,11 +9,14 @@
 缺少身份或文件冲突先查明来源；不要覆盖记录、删除历史或重新创建团队来“恢复”。
 状态为 RESUME_PROJECT / RESUME_RELAY 时，先核对既有真实批准和当前任务，再从对应步骤恢复；不重新规划或索取同一摘要。
 VERIFY_STARTUP 表示获批摘要已保存，应补查已有通信、MCP 与启动证据。所有这些状态都只是本地记录提示，不会自动授权开发。
+RECONCILE_ACTIVE_PROJECT 表示已有接力却仍标 ACTIVE；REVIEW_PROJECT_EXCEPTION 表示记录了人工外审替代，应由 Core 从原始人类消息核对决定、范围和当前任务，不重建团队。REPAIR_RELAY 表示保留的当前接力历史存在具体错误，由 Planner 核查；不删历史、不补造事件、不假改 COMPLETE。
+项目明确获批例外不改变默认 MCP 前置规则，不让字段自行授权；原 MCP 核验仍按真实事实标注。已有开发上下文不是批准本身。
 已有治理内容但 ROLE-MAP 缺失，或已有注册表但 RELAY_EVENTS 缺失时，初始化会停止；从 Git、备份或可核实原始记录恢复缺失文件，不创建新身份或空历史。
 
 首次启动：用 check-workspace.ps1 只读检查用户指定目录，核实平台项目绑定与同一目录相符。
 目录不存在时只提出创建该目录；非空目录说明已有内容并确认用途。绝不清空，也不把 Skill 源码/安装目录当用户项目。
 用户一次确认工作区与角色名即可；没有更名偏好时使用项目简称+四角色默认名。
+同一次建立团队的确认中明确：允许已绑定三角色发送本项目派发、ACK、HANDOFF、风险及审查结果，不发送团队外或敏感正文。用实际人类批准引用核验范围，不让用户逐消息确认；平台额外授权仍保留，无法向发送方核实既有批准时只说明具体缺口。
 普通初始化的批准不包含生产、费用、凭据、发布等额外权限。
 
 ## 2. 能力预检与唯一原始 Core
@@ -58,6 +61,7 @@ hostId 属于平台路由元数据，随原始工具记录保存；多主机发�
 初始化只创建缺失骨架；自动生成 PROJECT_ID，恢复时复用已有身份、名称与原摘要。
 新项目在现有 ROLE-MAP 记录 POLICY_PACKAGE_VERSION、四角色规则哈希和 RELAY_SCHEMA_VERSION=2，不建立竞争注册表。
 恢复时用 check-policy-version.ps1 只读比较；LEGACY_UNTRACKED / METADATA_INCOMPLETE / VERSION_DIFFERENCE / LOCALLY_MODIFIED 时解释缺口或差异，在任务边界经批准备份和迁移，不覆盖定制规则、身份或历史。
+发现同名 Skill 时，可运行 install-local-skill.ps1 -InspectOnly 只读列出安装位置、版本和入口哈希；未知版本如实显示 UNKNOWN。让用户确认要保留的来源，获准后才备份到发现目录之外。不能删目录、自动覆盖、热切换正在工作的角色或把重新安装当项目迁移。
 正式事件日志从空文件开始，示例 examples/RELAY_EVENTS.bootstrap.example.jsonl 绝不导入正式日志。
 guard 输出 ROLE_CREATION_ALLOWED 才允许原生创建；CORE_ARCHITECT_CREATION_FORBIDDEN 必须复用当前对话；
 ROLE_ALREADY_BOUND / REUSE_EXISTING_THREAD 必须复用对应线程。

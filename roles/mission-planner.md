@@ -34,6 +34,7 @@
 
 - Mission Planner yields after successful DISPATCH：确认发送成功、记录 `DISPATCH` 后立即 `YIELD`，结束当前执行回合。
 - 不主动轮询 Build Executor 状态，不反复读取执造者聊天记录，不使用 `sleep` 或持续等待模式。
+- `wait_threads`（包括游标和 timeout=0）也是主动查询，不作为 DISPATCH 后的收尾动作；保存返回后结束回合，不能以“等 Core 批复”为由循环等待。
 - ACK 只表示执造者已接收；收到真实 `HANDOFF` 后才 `WAKE` 并启动正式 `REVIEW`。
 - `PASS` 后按 Mission 是否完成，发送下一 TASK 的 DISPATCH 或 MISSION_COMPLETE，然后 YIELD；不因等待 ACK 保持在线。
 - 消息发送失败时记录真实错误，只进行一次定向恢复；恢复失败或平台没有真实回唤能力时记录 `CAPABILITY GAP` 并 `BLOCKED`/`ESCALATE`。

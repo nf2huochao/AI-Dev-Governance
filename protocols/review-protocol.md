@@ -17,12 +17,20 @@ Evidence Checked:
 Tests Checked:
 Counter Evidence Checked:
 Scope Check:
+Required Delivery Level: IMPLEMENTED | ISOLATED_TESTED | LIVE_CONNECTED | USER_ACCEPTED
+Achieved Delivery Level:
+Core End-to-End Evidence:
+Real Integration Status: VERIFIED | NOT_TESTED | BLOCKED
+Remaining Delivery Blockers:
 Decision: PASS | REWORK | BLOCKED | ESCALATE
 Reason:
 Next Action:
 ```
 
 Review 必须检查实际改动、Commit、测试结果、Counter Evidence、已知限制和是否超出 Scope。
+交付层级是证据说明，不增加新的 PASS 状态或角色权限。TASK Contract 在派发前明确 Required Delivery Level 与核心完整流程：例如真实输入经生产链路到用户可见结果；不能在交付后把真实接通目标降成隔离测试通过。实现、隔离测试、真实连接与用户验收分别举证，未知保持未知。
+
+先安排能证明核心、非平庸完整流程的工作，再扩展周边功能；已有真实权限缺口只阻断相关连接步骤，不靠堆 UI/fixture PASS 替代，也不扩大凭据/联网权限。局部 TASK 的 PASS 不表示产品功能完整：天枢核依据用户目标核对未接通/未验收清单，再决定 Mission/Gate，不以 PASS 数或测试数量替代可用性。
 
 ## 3. PASS
 

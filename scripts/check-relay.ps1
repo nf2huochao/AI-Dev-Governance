@@ -2,7 +2,9 @@
 param(
     [Parameter(Position = 0)]
     [string]$ProjectPath = (Get-Location).Path,
-    [switch]$Strict
+    [switch]$Strict,
+    # Prospective history for the append writer; never a stored-log attestation.
+    [AllowEmptyCollection()][string[]]$EventLines
 )
 
 $ErrorActionPreference = 'Stop'
@@ -24,7 +26,8 @@ if (Test-Path -LiteralPath $mapPath -PathType Leaf) {
     $registry = Read-RoleMap $mapPath
     $mapText = [IO.File]::ReadAllText($mapPath, [Text.Encoding]::UTF8)
 }
-$lines = [IO.File]::ReadAllLines($eventsPath, [Text.Encoding]::UTF8)
+$lines = if ($PSBoundParameters.ContainsKey('EventLines')) { @($EventLines) } else { [IO.File]::ReadAllLines($eventsPath, [Text.Encoding]::UTF8) }
+$validationSource = if ($PSBoundParameters.ContainsKey('EventLines')) { 'provided_preview' } else { 'stored_log' }
 # New projects/explicit Strict check all events. Legacy projects can upgrade at
 # a task boundary without rewriting their earlier unverified history.
 $strictMode = [bool]$Strict -or (Get-RoleMapField $mapText 'RELAY_SCHEMA_VERSION') -eq '2'
@@ -77,6 +80,7 @@ foreach ($line in $lines) {
     if ([string]::IsNullOrWhiteSpace($line)) { continue }
     $count++
     try {
+        if ($line -notmatch '^\s*\{') { throw 'expected event object' }
         $event = $line | ConvertFrom-Json
         if ($null -eq $event -or $event -is [array] -or $event -isnot [pscustomobject]) { throw 'expected event object' }
     } catch { throw "Invalid JSON object at event $count" }
@@ -181,15 +185,15 @@ foreach ($line in $lines) {
 }
 
 if ($count -eq 0) {
-    Write-Output 'Relay validation: PASS (empty initial log; no formal relay or control event has occurred)'
+    Write-Output "Relay validation: PASS (empty initial log; no formal relay or control event has occurred; validation_source=$validationSource)"
     return
 }
 if ($formalCount -eq 0) {
-    Write-Output "Relay validation: PASS (structure valid; $controlCount control events; formal relay not started)"
+    Write-Output "Relay validation: PASS (structure valid; $controlCount control events; formal relay not started; validation_source=$validationSource)"
     return
 }
 
 $completion = if ($previous -eq 'PASS') { 'true' } else { 'false' }
 $waiting = if ($previous -eq 'DISPATCH') { '; runtime_state=WAITING_ACK' } else { '' }
 $evidenceStatus = if ($legacyFormalEvents -eq 0) { 'LOCAL_LINKS_VALID' } else { 'LEGACY_EVIDENCE_GAP' }
-Write-Output "Relay validation: PASS (structure valid; events=$count; formal_events=$formalCount; completed_tasks=0; declared_tasks=$completedTasks; evidence_linked_tasks=$evidenceLinkedTasks; evidence_status=$evidenceStatus; platform_attestation=false; final_state=$previous; structural_completion=$completion$waiting)"
+Write-Output "Relay validation: PASS (structure valid; events=$count; formal_events=$formalCount; completed_tasks=0; declared_tasks=$completedTasks; evidence_linked_tasks=$evidenceLinkedTasks; evidence_status=$evidenceStatus; platform_attestation=false; final_state=$previous; structural_completion=$completion$waiting; validation_source=$validationSource)"

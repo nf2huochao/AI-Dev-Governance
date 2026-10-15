@@ -25,5 +25,9 @@
 - Run `check-startup-readiness.ps1` and preserve the original platform/MCP records before publishing the first Mission. The checker must not authenticate hand-written JSON, `VERIFIED_BY_PLATFORM`, message IDs or send-tool success; when no native evidence verifier exists, remain `MANUAL_REQUIRED`.
 - Normal relay uses `SEND → YIELD → WAKE → ACT`.
 - No polling. Work on events.
+- After a boundary send, persist its real return and end the turn; wait_threads, cursors and zero-time snapshots are not YIELD. An Executor ACK still permits its own task work.
+- Formal relay events are archived by the Planner from actual evidence using add-relay-event.ps1; the original Core records Bootstrap controls. Never bypass prospective validation by direct log writes or custom state aliases.
+- Dispatch/review distinguishes IMPLEMENTED, ISOLATED_TESTED, LIVE_CONNECTED and USER_ACCEPTED evidence. Prioritize the core end-to-end outcome; scoped PASS counts do not establish product readiness.
+- A recorded project exception must be checked against the actual human decision; manual external review never establishes MCP access. Recover existing context instead of rebuilding the team.
 - Governance files and logs do not replace real messages, Handoffs, tests, Commit evidence or platform wake evidence.
 - Production, real data, credentials, irreversible actions, payment, public release and frozen architecture changes require Human Governor authorization.

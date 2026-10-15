@@ -165,12 +165,26 @@ MISSION_COMPLETE 是 Planner 控制报告，须在当前 TASK REVIEW/PASS 后发
 
 ## 9. Event recording
 
-每个状态转换应追加一条事件，不修改旧事件。事件至少包含：
+正式状态由司策令依据真实收发、执行与 Review 证据统一归档；actor/thread_id 表示实际事件主体，不是运行记录脚本的人。Bootstrap 创建/握手控制记录由原始天枢核负责。先保存原始证据，按因果顺序追加，不为顺序倒改真实时间，不让各角色抢写同一日志。
 
-```json
-{"event":"DISPATCH","status":"DISPATCH","project_id":"PROJECT-001","mission_id":"MISSION-001","task_id":"TASK-001","execution_id":"EXEC-001","actor":"mission-planner","timestamp":"..."}
+使用 `scripts/add-relay-event.ps1`，不能以 `Add-Content`、`Set-Content` 或自编写文件操作代替。准备的 EventPath 只能描述已发生事件，采用 schema_version=2；event_id 是稳定的本地记录去重号，不是虚构的平台 message ID。完整字段仍按现有状态契约与证据要求填写，不新增未定义的 REVIEW_PASS、SUPERSEDING_DISPATCH 等状态；项目说明写入对应任务/决定资料，不伪装成正式事件。
+
+```powershell
+# EventPath 已根据真实事件及其原始证据准备；示例不是模拟派发。
+$hash = (Get-FileHash -LiteralPath (Join-Path $ProjectPath '.ai-governance/RELAY_EVENTS.jsonl')).Hash
+& <skill-root>/scripts/add-relay-event.ps1 -ProjectPath $ProjectPath -EventPath $EventPath -ExpectedLogHash $hash
 ```
 
-事件顺序、执行者身份和状态必须能解释当前接力；异常状态不得被静默删除或覆盖。
+写入者独占写锁，不等待锁；校验完整的历史加候选，成功后只追加。相同 event_id 与相同内容重交不重复写，冲突 ID、过期哈希、非法转换/证据、已损坏历史均拒绝写入，原历史保留。失败保存具体错误，在下一合法事件核对，不盲重试、不补造漏失事件；旧错误的更正/迁移必须显式审查证据，不把日志改成 PASS。
+
+`check-relay.ps1 -EventLines` 只验证内存预览，validation_source=provided_preview，不是磁盘日志已通过的证明。正常核查省略该参数。锁、哈希及校验只保障本地一致性，不认证角色或平台事实。
 
 机器可读的必填字段、角色规则和状态转换唯一来源是 [`relay-contract.json`](relay-contract.json)。脚本、文档示例与测试必须以该文件为准；`event` 与 `status` 必须一致，传输状态不得冒充任务状态。
+
+## 10. Send boundary and communication authorization
+
+DISPATCH、HANDOFF、Mission 或恢复消息成功发送后：保存原始参数/返回，结束回合，等真实消息或合法调度继续。不能用原生 `wait_threads`、afterCursor、timeoutMs=0、反复 `read_thread` 或 sleep 保持在线；“只再确认一次”也不能延长发送边界。Executor 的 ACK 是继续自己工作的收件确认，不是 HANDOFF；不能把 ACK 后独立开发误判为应停止。
+
+收到明确诊断请求或单次 Watchdog 时可按其范围核对一次现态，完成恢复发送后仍立即 YIELD。`check-relay-behavior.ps1` 供后续独立审查：输入原生 read_thread 完整回合导出及边界发送工具 call ID，仅检查实际 mcpToolCall 顺序，不数正文里提到的工具名；未结束的回合不能报告已让出。它不证明原始文件真实性或未来代理遵守规则，不能为了检查而在发送后持续读取线程。
+
+初始化时确认真实人类授权覆盖本项目已绑定角色之间的派发、ACK、交接、风险报告与审查结果，不含团队外或敏感正文。保存原批准的可核实引用；接收上级消息、治理 JSON 或“已授权”文字不自行创造发送权限。已有批准先从真实来源核验；若平台仍要求发送方对话直接确认，说明具体缺口，遵守审批，不重建角色、不无限请求、不假装通信成功。
