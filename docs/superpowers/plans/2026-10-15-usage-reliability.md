@@ -38,6 +38,8 @@ The append writer enforces local structure, not honest platform reporting. The t
 
 ## Verified results
 
+Publication scope update: the Human Governor subsequently authorized completing and publishing v0.1.4 on GitHub. The original no-publication constraint above records the earlier implementation scope; it no longer blocks the separately authorized release. Existing installations and running teams remain untouched.
+
 Implementation tasks above are complete. PowerShell 7.6.5 and Windows PowerShell 5.1 each passed all 20 test files; the new usage-reliability suite passed 12/12 cases in each shell. Metadata validation and git diff whitespace checks passed. An offline historical native-action export correctly produced SEND_YIELD_VIOLATION; it is private test material, excluded from the runtime package and commit.
 
 Fresh independent multi-chat compliance, actual MCP connectivity and user acceptance remain MANUAL_REQUIRED. No existing project, global installation, archived conversation or GitHub release was changed. Runtime package installation is checked in an isolated temporary directory; it does not establish Codex discovery or platform communication.
