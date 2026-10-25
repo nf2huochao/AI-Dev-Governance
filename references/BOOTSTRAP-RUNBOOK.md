@@ -111,8 +111,8 @@ ChatGPT 生成 PROJECT STARTUP SUMMARY 初稿 DRAFT，用户批准后为 APPROVE
 
 核对实际用户批准，不因文件写 APPROVED 就假定批准发生。恢复时复用相同摘要，变更须明确批准。
 已有日志不清空，资料存在不等于开发就绪。
-按 docs/MCP-EXTERNAL-ADVISOR-SETUP.zh-CN.md 指导用户完成平台需要的授权；
-用实际只读连接读取目标项目的 ROLE-MAP 项目标识及一份允许公开给外参师的工程文件。
+按 docs/MCP-EXTERNAL-ADVISOR-SETUP.zh-CN.md 指导用户完成平台需要的授权；天枢核先运行 `scripts/get-advisor-connection-request.ps1 -ProjectPath <workspace>`，把生成的完整文字给用户一次复制到当前项目的 ChatGPT 外参师对话。该只读脚本从本项目 ROLE-MAP 提取精确 PROJECT_ID 和 PROJECT_PATH；路径与登记不符时停止，不输出貌似正确的请求。
+外参师必须通过实际只读连接读取该项目 ROLE-MAP 与 CURRENT_PHASE，返回原始工具引用；天枢核核对实际读取的项目 ID、路径和内容。用户转发文件、连接显示已保存或脚本输出都不是 MCP 成功证据。
 check-mcp-target.ps1 比对两个输入路径只是辅助，不能证明真实连接、权限或读取成功。
 当前账号没有相应入口/连接能力时如实 MANUAL_REQUIRED，不声称所有 Plus 账户都支持。
 连接失败不索要凭据，不重开发 MCP，不降级为同一 AI 自我审查。

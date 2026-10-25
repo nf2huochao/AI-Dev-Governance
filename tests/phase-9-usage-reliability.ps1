@@ -1,4 +1,4 @@
-$ErrorActionPreference='Stop'
+﻿$ErrorActionPreference='Stop'
 $root=Split-Path -Parent $PSScriptRoot
 $run=Join-Path $root ('.test-artifacts/usage-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $run|Out-Null
@@ -40,6 +40,11 @@ function Trace($items){
     $path=Join-Path $run 'native-trace.json'
     @{thread=@{id='tp'};turns=@(@{id='turn-one';status='completed';items=@($items)})}|ConvertTo-Json -Depth 14|ForEach-Object{W $path $_}
     Run 'check-relay-behavior.ps1' @('-TracePath',$path,'-SendCallId','send-1')
+}
+function TraceAll($turns){
+    $path=Join-Path $run 'native-trace-all.json'
+    @{thread=@{id='tp'};turns=@($turns)}|ConvertTo-Json -Depth 14|ForEach-Object{W $path $_}
+    Run 'check-relay-behavior.ps1' @('-TracePath',$path,'-AuditAll')
 }
 $send=@{type='mcpToolCall';id='send-1';tool='send_message_to_thread';status='completed';arguments=@{threadId='te';prompt='DISPATCH T1'}}
 try{
@@ -123,6 +128,27 @@ try{
         @{thread=@{id='tp'};turns=@(@{id='turn-live';status='inProgress';items=@($send)})}|ConvertTo-Json -Depth 12|ForEach-Object{W $path $_}
         $r=Run 'check-relay-behavior.ps1' @('-TracePath',$path,'-SendCallId','send-1')
         Assert ($r.Code -ne 0 -and $r.Text -match 'TURN_NOT_FINISHED') $r.Text
+    }
+    Case 'whole-thread audit finds polling after any send without manual call ID selection' {
+        $good=@{id='good';status='completed';items=@($send,@{type='agentMessage';phase='final_answer';text='Yield'})}
+        $bad=@{id='bad';status='completed';items=@(@{type='mcpToolCall';id='send-2';tool='send_message_to_thread';status='completed'},@{type='mcpToolCall';id='wait-2';tool='wait_threads';status='completed'})}
+        $r=TraceAll @($good,$bad)
+        Assert ($r.Code -ne 0 -and $r.Text -match 'SEND_YIELD_VIOLATION' -and $r.Text -match 'wait-2') $r.Text
+        $r=TraceAll @($good)
+        Assert ($r.Code -eq 0) $r.Text
+        $v=$r.Text|ConvertFrom-Json
+        Assert ($v.audited_sends -eq 1 -and -not $v.platform_attestation) $r.Text
+    }
+    Case 'advisor connection request uses this project identity and demands actual reads' {
+        $q=New-Project 'advisor-request'
+        $r=Run 'get-advisor-connection-request.ps1' @('-ProjectPath',$q)
+        Assert ($r.Code -eq 0 -and $r.Text -match 'usage-fixture' -and $r.Text.Contains($q)) $r.Text
+        Assert ($r.Text -match 'ROLE-MAP.md' -and $r.Text -match 'CURRENT_PHASE.md' -and $r.Text -match 'MCP_TARGET_MISMATCH') $r.Text
+        Assert ($r.Text -match '未验证' -and $r.Text -notmatch 'MCP_TARGET_MATCH: PASS') $r.Text
+        $other=New-Project 'advisor-other'
+        W (Join-Path $other '.ai-governance/ROLE-MAP.md') ([IO.File]::ReadAllText((Join-Path $q '.ai-governance/ROLE-MAP.md')))
+        $r=Run 'get-advisor-connection-request.ps1' @('-ProjectPath',$other)
+        Assert ($r.Code -ne 0 -and $r.Text -match 'PROJECT_PATH_CONFLICT') 'A copied old project binding was accepted'
     }
     Case 'installation inspection detects duplicate versions without copying anything' {
         $discovery=Join-Path $run 'discovery';New-Item -ItemType Directory -Path $discovery|Out-Null

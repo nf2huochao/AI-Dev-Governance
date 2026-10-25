@@ -63,8 +63,9 @@ PASS 后有当前 Mission 内的真实剩余工作才派下一 TASK；Mission �
 
 SEND → YIELD → WAKE → ACT。No polling. Work on events.
 成功派发/HANDOFF 后让出执行权；执造者 ACK 后继续自身工作。禁止空转轮询、sleep 等待和无限重试。
-边界发送后只保存真实返回并结束本轮；`wait_threads`、带游标等待和 timeout=0 查询都不能替代 YIELD。按需由后续独立审查运行 scripts/check-relay-behavior.ps1 检查原生调用序列，不在发送后查询自己或对方来“验让出”。
+边界发送后只保存真实返回并结束本轮；`wait_threads`、带游标等待和 timeout=0 查询都不能替代 YIELD。后续独立审查可对已有原生对话导出运行 scripts/check-relay-behavior.ps1 -AuditAll，一次核对导出范围内的全部发送边界；不要为检查而唤醒或轮询正在工作的角色。
 Watchdog 每次真实调度只检查一次；正常静默结束本轮，异常只做一次定向恢复。
+巡检先读现有治理状态；只有证据缺口影响判断时才对相关角色做一次定向状态读取，不在每次正常巡检都查询全部角色。
 发送成功不等于接收、执行或唤醒。无真实回唤能力时记录 BLOCKED / CAPABILITY GAP。
 
 正式 RELAY_EVENTS.jsonl 从空日志开始；只追加已发生事件，保留历史。

@@ -19,6 +19,7 @@ SEND → YIELD → WAKE → ACT
 - 发送方发送成功后记录发送事件，立即 `YIELD` 并结束当前执行回合；发送成功只证明消息已被传输层接受，`send success is not task completion`。
 - 接收方由真实消息或平台调度事件 `WAKE`，读取已收到的 Contract、ACK 或 HANDOFF 后再 `ACT`。
 - 发送方不得主动轮询接收方线程状态、反复读取对方聊天记录、使用 `sleep` 等待或持续查询“是否完成”。
+- 独立审查已有原生对话导出时，用 `scripts/check-relay-behavior.ps1 -TracePath <export> -AuditAll` 一次检查导出范围内全部发送边界；若导出只有部分对话，不声称全程通过。这是事后检查，不能把脚本 PASS 当成接收、唤醒或真实遵守协议的证明。不得为了运行检查而查询当前接力对话。
 - ACK 只表示任务已接收，不表示任务完成、Handoff 已提交或 Review 已完成。
 - 平台若不能在发送方结束当前回合后提供真实回唤（`real wake capability`），必须记录 `CAPABILITY GAP` 并将受影响路线置为 `BLOCKED`；不得用无限轮询伪造事件驱动。
 - 消息发送失败时记录真实错误，只进行一次定向恢复（`one targeted recovery`）；恢复仍失败则 `BLOCKED` 或按协议 `ESCALATE`，不得无限重试。

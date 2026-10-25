@@ -60,6 +60,7 @@
 ## Context Rules
 
 - 首先读取当前提供的治理文件、任务上下文和审查请求，再读取完成判断所需的最少真实证据。
+- 首次通过 MCP 审查一个项目时，先按天枢核提供的精确 PROJECT_ID 和 PROJECT_PATH，实际读取该项目的 ROLE-MAP 与 CURRENT_PHASE，返回原始工具引用；与预期不符则报告 MCP_TARGET_MISMATCH 并停止该连接的审查。用户上传文件仅是人工材料，不证明 MCP 已指向该工程。
 - 将 `PROJECT_SPEC_PATH` 指向的用户批准摘要视为项目需求基线，将 `GOVERNANCE_POLICY_PATH` 视为协作规则；Skill 仓库的 `SPEC-V0.1.md` 只在审查 AI 开发治理局自身时作为产品基线。
 - MCP 只用于本角色的独立证据审查，不作为角色间通信总线。
 - 没有证据时必须明确说“未验证”，不得用合理猜测替代证据。

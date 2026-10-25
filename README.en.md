@@ -24,7 +24,8 @@
 
 ## Versions and updates
 
-- [v0.1.4: reliable relay recording, recovery and acceptance improvements](https://github.com/nf2huochao/AI-Dev-Governance/releases/tag/v0.1.4) (current public beta).
+- [v0.1.5: relay polling audit and External Advisor connection checks](https://github.com/nf2huochao/AI-Dev-Governance/releases/tag/v0.1.5) (current public beta).
+- [v0.1.4: reliable relay recording, recovery and acceptance improvements](https://github.com/nf2huochao/AI-Dev-Governance/releases/tag/v0.1.4).
 - [v0.1.3: identity, relay-failure handling, evidence links and onboarding](https://github.com/nf2huochao/AI-Dev-Governance/releases/tag/v0.1.3).
 - [v0.1.2: project recovery and team-startup improvements](https://github.com/nf2huochao/AI-Dev-Governance/releases/tag/v0.1.2).
 - [v0.1.1: onboarding, installation, and evidence-boundary improvements](https://github.com/nf2huochao/AI-Dev-Governance/releases/tag/v0.1.1).
@@ -280,14 +281,14 @@ Through an authorized MCP connection, the External Advisor can read real enginee
 
 # Installation
 
-> Current public beta: `v0.1.4`. Reinstallation does not migrate an existing project's rules. Ask Codex to compare policy versions and customizations read-only at a task boundary, then back up and migrate only with approval. Preserve role bindings and history.
+> Current public beta: `v0.1.5`. Reinstallation does not migrate an existing project's rules. Ask Codex to compare policy versions and customizations read-only at a task boundary, then back up and migrate only with approval. Preserve role bindings and history.
 
 ## Ask Codex to install it for you (recommended)
 
 Copy the complete sentence below into Codex:
 
 ```text
-Install AI Dev Governance Skill version v0.1.4 from https://github.com/nf2huochao/AI-Dev-Governance. Check for an existing Skill with the same name first; explain a safe backup or update path and do not overwrite it without my confirmation. Then check discovery in a new Codex task. For existing projects, compare policy versions read-only; do not recreate the team or rewrite history.
+Install AI Dev Governance Skill version v0.1.5 from https://github.com/nf2huochao/AI-Dev-Governance. Check for an existing Skill with the same name first; explain a safe backup or update path and do not overwrite it without my confirmation. Then check discovery in a new Codex task. For existing projects, compare policy versions read-only; do not recreate the team or rewrite history.
 ```
 
 ## Manual installation with PowerShell
@@ -296,7 +297,7 @@ Run the following in Windows PowerShell:
 
 ```powershell
 $src = Join-Path $env:TEMP ("ai-dev-governance-" + [guid]::NewGuid())
-git clone --depth 1 --branch v0.1.4 https://github.com/nf2huochao/AI-Dev-Governance.git $src
+git clone --depth 1 --branch v0.1.5 https://github.com/nf2huochao/AI-Dev-Governance.git $src
 if ($LASTEXITCODE -ne 0) { throw 'GitHub download failed; installation was not run' }
 powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $src "scripts\install-local-skill.ps1")
 ```

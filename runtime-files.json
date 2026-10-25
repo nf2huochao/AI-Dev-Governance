@@ -1,5 +1,5 @@
 {
-  "package_version": "0.1.4",
+  "package_version": "0.1.5",
   "files": [
     "SKILL.md",
     "LICENSE",
@@ -33,6 +33,7 @@
     "scripts/add-relay-event.ps1",
     "scripts/check-relay-behavior.ps1",
     "scripts/check-mcp-target.ps1",
+    "scripts/get-advisor-connection-request.ps1",
     "scripts/check-relay.ps1",
     "scripts/check-role-bindings.ps1",
     "scripts/check-startup-readiness.ps1",
